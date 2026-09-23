@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tasse rose avec des oreilles de chat -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- oreilles -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M36,46 L40,30 L50,42 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M72,46 L68,30 L58,42 Z" />
+    <path android:fillColor="#FFF48FB1" android:pathData="M39,43 L41,35 L46,41 Z" />
+    <path android:fillColor="#FFF48FB1" android:pathData="M69,43 L67,35 L62,41 Z" />
+    <!-- anse -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:fillColor="#00000000"
+        android:pathData="M74,52 C86,52 86,70 72,70" />
+    <!-- tasse -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M32,42 L76,42 L72,76 Q71,80 67,80 L41,80 Q37,80 36,76 Z" />
+    <!-- visage -->
+    <path android:fillColor="#FF5D4037" android:pathData="M45,58 m-2.5,0 a2.5,2.5 0,1 0,5 0 a2.5,2.5 0,1 0,-5 0" />
+    <path android:fillColor="#FF5D4037" android:pathData="M63,58 m-2.5,0 a2.5,2.5 0,1 0,5 0 a2.5,2.5 0,1 0,-5 0" />
+    <path android:strokeColor="#FF5D4037" android:strokeWidth="1.8" android:fillColor="#00000000"
+        android:pathData="M50,64 Q52,67 54,64 Q56,67 58,64" />
+    <path android:fillColor="#FFF8BBD0" android:pathData="M40,64 m-3,0 a3,2 0,1 0,6 0 a3,2 0,1 0,-6 0" />
+    <path android:fillColor="#FFF8BBD0" android:pathData="M68,64 m-3,0 a3,2 0,1 0,6 0 a3,2 0,1 0,-6 0" />
+</vector>

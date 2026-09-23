@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Meowcha" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FFF8BBD0</item>
+        <item name="android:navigationBarColor">#FFFCE4EC</item>
+        <item name="android:windowBackground">@color/bg</item>
+    </style>
+</resources>
