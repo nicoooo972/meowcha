@@ -28,7 +28,7 @@ object Audio {
         music = musicFiles
         pool?.release()
         val p = SoundPool.Builder()
-            .setMaxStreams(4)
+            .setMaxStreams(6)
             .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
             .build()
         sounds = sfxFiles.mapValues { (_, f) -> p.load(f.path, 1) }
@@ -68,6 +68,22 @@ object Audio {
         if (!sfxOn) return
         val id = sounds[sound] ?: return
         pool?.play(id, 0.8f, 0.8f, 1, 0, 1f)
+    }
+
+    /** Bruitage propre à chaque ingrédient (versement, mousse, glaçons...). */
+    fun playIngredient(ing: Ingredient) {
+        val key = when (ing) {
+            Ingredient.ESPRESSO -> "espresso"
+            Ingredient.WATER, Ingredient.TEA -> "pour_water"
+            Ingredient.MILK -> "pour_milk"
+            Ingredient.FOAM -> "steam"
+            Ingredient.STRAWBERRY, Ingredient.VANILLA, Ingredient.CHOCO, Ingredient.CARAMEL -> "syrup"
+            Ingredient.MATCHA -> "whisk"
+            Ingredient.ICE -> "ice"
+            Ingredient.CREAM -> "cream"
+            Ingredient.MARSHMALLOW, Ingredient.SAKURA -> "sprinkle"
+        }
+        if (key in sounds) play(key) else play("add")
     }
 
     fun onPause() {

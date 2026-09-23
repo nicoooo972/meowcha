@@ -221,7 +221,8 @@ private fun HomeScreen(vm: GameViewModel, account: AccountEntity, onLogout: () -
         Title("Meowcha Café", 44)
 
         Box(Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(28.dp))) {
-            CafeBackdrop(decor, Modifier.fillMaxSize())
+            val homeTilt by rememberTilt()
+            CafeBackdrop(decor, Modifier.fillMaxSize(), homeTilt)
             CatPortrait(Cats.byId(account.avatarCat), Mood.HAPPY,
                 Modifier.size(160.dp).align(Alignment.BottomStart).padding(start = 12.dp).graphicsLayer { translationY = dy * density })
             MugView(Mugs.byId(player.equippedMug), listOf(Ingredient.ESPRESSO, Ingredient.STRAWBERRY, Ingredient.MILK, Ingredient.FOAM),
@@ -288,6 +289,13 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
     }
     val order = s.current ?: return
     var showSteps by remember(order.id) { mutableStateOf(false) }
+    val tilt by rememberTilt()
+    // Clochette de la porte + miaou à l'arrivée de chaque chat
+    LaunchedEffect(order.id) {
+        Audio.play("bell")
+        kotlinx.coroutines.delay(450)
+        Audio.play("meow")
+    }
 
     // Arrivée du chat qui glisse depuis la gauche
     val enter = remember(order.id) { Animatable(-1.2f) }
@@ -304,7 +312,12 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
     val pop = remember(order.id) { Animatable(0f) }
     LaunchedEffect(s.lastResult) {
         s.lastResult?.let { r ->
-            Audio.play(if (r.stars == 3) "perfect" else if (r.stars >= 2) "coin" else "sad")
+            if (r.stars >= 2) {
+                Audio.play(if (r.stars == 3) "perfect" else "coin")
+                Audio.play("meow_happy")
+            } else {
+                Audio.play("meow_sad")
+            }
         }
         if (s.lastResult != null) pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow))
     }
@@ -337,11 +350,12 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
         // Scène : chat + bulle
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
             val sceneWidth = constraints.maxWidth.toFloat()
-            CafeBackdrop(decor, Modifier.fillMaxSize())
+            CafeBackdrop(decor, Modifier.fillMaxSize(), tilt)
             Box(
                 Modifier.size(220.dp).align(Alignment.BottomStart).padding(start = 4.dp)
                     .graphicsLayer {
-                        translationX = enter.value * sceneWidth
+                        translationX = enter.value * sceneWidth + tilt.x * 14.dp.toPx()
+                        translationY = tilt.y * 6.dp.toPx()
                         val squish = if (petAnim.value < 1f) 1f + 0.06f * kotlin.math.sin(petAnim.value * Math.PI.toFloat() * 3f) else 1f
                         scaleX = squish; scaleY = 2f - squish
                     }
@@ -404,10 +418,11 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
 
         // Comptoir : mug
         Box(
-            Modifier.fillMaxWidth().height(150.dp).background(Brush.verticalGradient(listOf(Color(0xFFD7A08C), Pink.Wood))),
+            Modifier.fillMaxWidth().height(170.dp),
             contentAlignment = Alignment.Center,
         ) {
-            MugView(mug, s.cup, Modifier.size(140.dp).padding(top = 12.dp))
+            CounterTop(Modifier.fillMaxSize(), tilt)
+            MugView(mug, s.cup, Modifier.size(170.dp).graphicsLayer { translationX = tilt.x * 18.dp.toPx() })
             if (s.cup.isNotEmpty()) {
                 Text(
                     s.cup.joinToString(" ") { it.emoji },
@@ -435,7 +450,7 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                         .border(2.dp, ing.color.copy(alpha = 0.9f), RoundedCornerShape(14.dp))
                         .clickable(enabled = !s.reacting && s.cup.size < 6) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            Audio.play("add")
+                            Audio.playIngredient(ing)
                             vm.add(ing)
                         }
                         .padding(vertical = 6.dp),
@@ -452,7 +467,7 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
         ) {
             val canEdit = s.cup.isNotEmpty() && !s.reacting
             CuteButton("↩️", Modifier.weight(0.8f), Color(0xFFCE93D8), enabled = canEdit) { vm.undo() }
-            CuteButton("🗑️", Modifier.weight(0.8f), Color(0xFFBDBDBD), enabled = canEdit) { vm.trash() }
+            CuteButton("🗑️", Modifier.weight(0.8f), Color(0xFFBDBDBD), enabled = canEdit) { Audio.play("trash"); vm.trash() }
             CuteButton("💝 Servir", Modifier.weight(2f), Pink.Deep, enabled = canEdit) {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 vm.serve()
@@ -492,67 +507,6 @@ private fun ResultBadge(stars: Int, coins: Int, photo: Boolean, combo: Int) {
         if (combo >= 2) Text("Combo x$combo 🔥", color = Color(0xFFE65100), fontWeight = FontWeight.Bold)
         if (photo) Text("📸 Photo souvenir !", color = Pink.Text, fontSize = 13.sp)
     }
-}
-
-/** Décor du café : fenêtre, guirlande, et les décorations achetées. */
-@Composable
-fun CafeBackdrop(decor: Set<String>, modifier: Modifier) {
-    val anim = rememberInfiniteTransition(label = "twinkle")
-    val twinkle by anim.animateFloat(0.4f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "tw")
-    Canvas(modifier) {
-        val w = size.width; val h = size.height
-        // Mur à rayures
-        var x = 0f
-        while (x < w) { drawRect(Color.White.copy(alpha = 0.25f), Offset(x, 0f), Size(w * 0.05f, h)); x += w * 0.1f }
-        if ("rug" in decor) drawOval(Color(0xFFF48FB1), Offset(w * 0.05f, h * 0.86f), Size(w * 0.5f, h * 0.16f))
-        // Fenêtre
-        drawRoundRect(Color(0xFFB3E5FC), Offset(w * 0.05f, h * 0.1f), Size(w * 0.3f, h * 0.32f), CornerRadius(24f))
-        drawCircle(Color.White, w * 0.03f, Offset(w * 0.13f, h * 0.2f))
-        drawCircle(Color.White, w * 0.04f, Offset(w * 0.17f, h * 0.2f))
-        drawLine(Color.White, Offset(w * 0.2f, h * 0.1f), Offset(w * 0.2f, h * 0.42f), 6f)
-        drawLine(Color.White, Offset(w * 0.05f, h * 0.26f), Offset(w * 0.35f, h * 0.26f), 6f)
-        // Guirlande de cœurs ou lumineuse
-        for (i in 0 until 9) {
-            val c = Offset(w * (0.05f + i * 0.11f), h * 0.04f + (i % 2) * 8f)
-            if ("garland" in decor) drawCircle(listOf(Color(0xFFFFF176), Pink.Main, Color(0xFF81D4FA))[i % 3].copy(alpha = if (i % 2 == 0) twinkle else 1.4f - twinkle), 9f, c)
-            else drawHeart(c, 14f, if (i % 2 == 0) Pink.Main else Color.White)
-        }
-        // Étagère
-        drawRect(Color(0xFFD7A08C), Offset(w * 0.45f, h * 0.55f), Size(w * 0.5f, 10f))
-        if ("painting" in decor) {
-            drawRect(Color(0xFFFFD54F), Offset(w * 0.42f, h * 0.12f), Size(w * 0.16f, h * 0.2f))
-            drawRect(Pink.Light, Offset(w * 0.435f, h * 0.135f), Size(w * 0.13f, h * 0.17f))
-            drawCircle(Color.White, w * 0.035f, Offset(w * 0.5f, h * 0.23f))
-        }
-        if ("plant" in decor) drawPlant(Offset(w * 0.52f, h * 0.55f), w * 0.05f)
-        if ("lamp" in decor) {
-            drawLine(Color(0xFF8D6E63), Offset(w * 0.9f, 0f), Offset(w * 0.9f, h * 0.12f), 3f)
-            drawCircle(Color(0xFFFFF9C4).copy(alpha = twinkle * 0.5f), w * 0.09f, Offset(w * 0.9f, h * 0.16f))
-            drawCircle(Color.White, w * 0.04f, Offset(w * 0.87f, h * 0.16f))
-            drawCircle(Color.White, w * 0.05f, Offset(w * 0.92f, h * 0.15f))
-        }
-        if ("piano" in decor) {
-            drawRoundRect(Color(0xFFF06292), Offset(w * 0.66f, h * 0.36f), Size(w * 0.2f, h * 0.18f), CornerRadius(8f))
-            for (k in 0 until 6) drawRect(Color.White, Offset(w * 0.67f + k * w * 0.03f, h * 0.44f), Size(w * 0.025f, h * 0.06f))
-        }
-        if ("cattree" in decor) {
-            drawRect(Color(0xFFBCAAA4), Offset(w * 0.9f, h * 0.35f), Size(w * 0.03f, h * 0.65f))
-            drawRoundRect(Color(0xFFE1BEE7), Offset(w * 0.84f, h * 0.35f), Size(w * 0.15f, h * 0.05f), CornerRadius(10f))
-            drawRoundRect(Color(0xFFE1BEE7), Offset(w * 0.84f, h * 0.65f), Size(w * 0.15f, h * 0.05f), CornerRadius(10f))
-        }
-    }
-}
-
-private fun DrawScope.drawPlant(base: Offset, s: Float) {
-    for (k in -2..2) {
-        drawOval(Color(0xFF81C784), Offset(base.x + k * s * 0.5f - s * 0.3f, base.y - s * 2.2f + kotlin.math.abs(k) * s * 0.4f), Size(s * 0.6f, s * 1.6f))
-    }
-    val pot = androidx.compose.ui.graphics.Path().apply {
-        moveTo(base.x - s, base.y - s * 1.1f); lineTo(base.x + s, base.y - s * 1.1f)
-        lineTo(base.x + s * 0.7f, base.y); lineTo(base.x - s * 0.7f, base.y); close()
-    }
-    drawPath(pot, Color(0xFFF8BBD0))
-    drawPath(pot, Color(0xFF6A1B4D), style = Stroke(2f))
 }
 
 @Composable

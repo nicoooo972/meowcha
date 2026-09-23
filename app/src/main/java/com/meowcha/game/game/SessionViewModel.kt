@@ -185,6 +185,9 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                 "🎯" to "3 objectifs par jour avec des récompenses",
                 "🪴" to "Décorations pour ton café, avec des bonus",
                 "📦" to "Contenu téléchargeable : de nouveaux chats sans mettre à jour l'app",
+                "✨" to "Café en relief : incline ton téléphone pour voir la salle bouger",
+                "☕" to "Nouvelles tasses en céramique, mousse onctueuse et latte art",
+                "🔊" to "Bruitages : miaous, versements, mousse, glaçons...",
             ),
         )
 

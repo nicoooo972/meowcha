@@ -1,8 +1,8 @@
 {
  "id": "sakura-spring",
- "version": 1,
+ "version": 2,
  "name": "Printemps Sakura",
- "description": "3 nouvelles chattes, 2 recettes printanières, la musique du café et les bruitages",
+ "description": "3 nouvelles chattes, 2 recettes, la musique du café et plein de bruitages (miaous, versements, mousse...)",
  "cats": [
   {
    "id": "fraisette",
@@ -76,7 +76,21 @@
   "perfect": "sfx/perfect.wav",
   "coin": "sfx/coin.wav",
   "purr": "sfx/purr.wav",
-  "sad": "sfx/sad.wav"
+  "sad": "sfx/sad.wav",
+  "meow": "sfx/meow.wav",
+  "meow_happy": "sfx/meow_happy.wav",
+  "meow_sad": "sfx/meow_sad.wav",
+  "pour_water": "sfx/pour_water.wav",
+  "pour_milk": "sfx/pour_milk.wav",
+  "syrup": "sfx/syrup.wav",
+  "espresso": "sfx/espresso.wav",
+  "steam": "sfx/steam.wav",
+  "whisk": "sfx/whisk.wav",
+  "ice": "sfx/ice.wav",
+  "cream": "sfx/cream.wav",
+  "sprinkle": "sfx/sprinkle.wav",
+  "bell": "sfx/bell.wav",
+  "trash": "sfx/trash.wav"
  },
  "generate": {
   "cafe": {
@@ -127,6 +141,62 @@
   "sad": {
    "type": "sad",
    "file": "sfx/sad.wav"
+  },
+  "meow": {
+   "type": "meow",
+   "file": "sfx/meow.wav"
+  },
+  "meow_happy": {
+   "type": "meow_happy",
+   "file": "sfx/meow_happy.wav"
+  },
+  "meow_sad": {
+   "type": "meow_sad",
+   "file": "sfx/meow_sad.wav"
+  },
+  "pour_water": {
+   "type": "pour_water",
+   "file": "sfx/pour_water.wav"
+  },
+  "pour_milk": {
+   "type": "pour_milk",
+   "file": "sfx/pour_milk.wav"
+  },
+  "syrup": {
+   "type": "syrup",
+   "file": "sfx/syrup.wav"
+  },
+  "espresso": {
+   "type": "espresso",
+   "file": "sfx/espresso.wav"
+  },
+  "steam": {
+   "type": "steam",
+   "file": "sfx/steam.wav"
+  },
+  "whisk": {
+   "type": "whisk",
+   "file": "sfx/whisk.wav"
+  },
+  "ice": {
+   "type": "ice",
+   "file": "sfx/ice.wav"
+  },
+  "cream": {
+   "type": "cream",
+   "file": "sfx/cream.wav"
+  },
+  "sprinkle": {
+   "type": "sprinkle",
+   "file": "sfx/sprinkle.wav"
+  },
+  "bell": {
+   "type": "bell",
+   "file": "sfx/bell.wav"
+  },
+  "trash": {
+   "type": "trash",
+   "file": "sfx/trash.wav"
   }
  }
 }

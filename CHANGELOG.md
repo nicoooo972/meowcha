@@ -14,6 +14,13 @@
 - Premier pack « Printemps Sakura » (~19 Mo) : musique du café et de l'accueil, bruitages
   (ronronnement, pièces, boisson parfaite…), 3 nouvelles chattes et 2 recettes
 - Bouton pour couper le son sur l'accueil
+- Graphismes en relief (2.5D) : salle du café en perspective (sol en damier, fenêtre et rayon
+  de lumière, suspensions, étagères), parallaxe quand on incline le téléphone, comptoir en bois
+- Chats en volume : ombrage, ombre portée, reflets dans les yeux, respiration, clignement, queue qui remue
+- Tasses en céramique vues de 3/4 : soucoupe, reflet brillant, liquide qui monte, filet qui coule
+  à chaque ajout, mousse onctueuse avec latte art, chantilly en spirale, glaçons, vapeur animée
+- Pack Printemps Sakura v2 : 14 nouveaux bruitages (miaous, clochette, espresso, versement d'eau
+  et de lait, sirop, mousse, fouet à matcha, glaçons, chantilly, garnitures, poubelle)
 - Fenêtre « Quoi de neuf ? » après un téléchargement ou au premier lancement d'une nouvelle version
 
 ## 1.0.0

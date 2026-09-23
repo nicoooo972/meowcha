@@ -88,7 +88,127 @@ def song(seconds, bpm, root, progression, seed, swing=0.0):
     return buf
 
 
+def band(sig, lo, hi):
+    """Filtre passe-bande par FFT (suffisant pour des bruitages)."""
+    spec = np.fft.rfft(sig)
+    f = np.fft.rfftfreq(len(sig), 1 / SR)
+    spec[(f < lo) | (f > hi)] = 0
+    return np.fft.irfft(spec, len(sig))
+
+
+def noise(dur, seed):
+    return np.random.default_rng(seed).normal(0, 1, int(SR * dur))
+
+
+def env_ar(n, attack, release):
+    t = np.arange(n) / SR
+    dur = n / SR
+    return np.minimum(1, t / max(attack, 1e-4)) * np.clip((dur - t) / max(release, 1e-4), 0, 1)
+
+
+def meow(dur, f_start, f_peak, f_end, seed, bright=1.0):
+    """Miaulement : glissando de hauteur + harmoniques façonnées par deux formants (i-a-ou)."""
+    n = int(SR * dur)
+    t = np.arange(n) / SR
+    x = t / dur
+    f0 = np.where(x < 0.35, f_start + (f_peak - f_start) * (x / 0.35), f_peak + (f_end - f_peak) * ((x - 0.35) / 0.65))
+    f0 = f0 * (1 + 0.012 * np.sin(2 * np.pi * 6 * t))  # léger vibrato
+    phase = 2 * np.pi * np.cumsum(f0) / SR
+    formant1 = 700 + 500 * np.sin(np.pi * x)          # la bouche s'ouvre puis se ferme
+    formant2 = 1900 + 700 * np.sin(np.pi * x) * bright
+    out = np.zeros(n)
+    for h in range(1, 14):
+        fh = f0 * h
+        gain = np.exp(-((fh - formant1) / 350) ** 2) + 0.6 * np.exp(-((fh - formant2) / 500) ** 2) + 0.05
+        out += np.sin(phase * h) * gain / h ** 0.3
+    breath = band(noise(dur, seed), 2000, 6000) * 0.04
+    return (out + breath) * env_ar(n, 0.04, 0.25)
+
+
+def glugs(dur, seed, lo, hi, rate, depth):
+    """Liquide versé : écoulement filtré + petites bulles (glou-glou)."""
+    rng = np.random.default_rng(seed)
+    n = int(SR * dur)
+    flow = band(noise(dur, seed), lo, hi) * 0.5
+    out = flow * env_ar(n, 0.08, 0.3)
+    t = 0.05
+    while t < dur - 0.15:
+        f = rng.uniform(250, 700) * depth
+        k = int(SR * 0.06)
+        tt = np.arange(k) / SR
+        bub = np.sin(2 * np.pi * np.cumsum(f * (1 + 2.5 * tt / 0.06)) / SR) * np.exp(-tt * 45) * 0.5
+        place(out, bub, t)
+        t += rng.uniform(0.5, 1.5) / rate
+    return out
+
+
 def sfx(name):
+    if name == "meow":
+        return meow(0.75, 520, 780, 430, 1)
+    if name == "meow_happy":
+        out = np.zeros(int(SR * 0.9))
+        place(out, meow(0.32, 700, 950, 800, 2, 1.3), 0)
+        place(out, meow(0.4, 750, 1000, 650, 3, 1.3), 0.38)
+        return out
+    if name == "meow_sad":
+        return meow(1.0, 600, 650, 330, 4, 0.6)
+    if name == "pour_water":
+        return glugs(1.1, 5, 300, 3500, 12, 1.2)
+    if name == "pour_milk":
+        return glugs(1.1, 6, 150, 1800, 7, 0.8)
+    if name == "syrup":
+        return glugs(0.9, 7, 100, 900, 4, 0.5)
+    if name == "espresso":
+        n = int(SR * 1.4)
+        t = np.arange(n) / SR
+        pump = (np.sin(2 * np.pi * 50 * t) + 0.5 * np.sign(np.sin(2 * np.pi * 100 * t))) * 0.15
+        hiss = band(noise(1.4, 8), 1500, 7000) * 0.35 * np.minimum(1, t / 0.5)
+        drip = glugs(1.4, 9, 400, 2500, 6, 1.0) * 0.5
+        return (pump + hiss + drip) * env_ar(n, 0.05, 0.3)
+    if name == "steam":
+        n = int(SR * 1.2)
+        t = np.arange(n) / SR
+        s_ = band(noise(1.2, 10), 2500, 9000) * (0.3 + 0.7 * np.sin(np.pi * t / 1.2))
+        gurgle = band(noise(1.2, 11), 200, 900) * 0.4 * (0.5 + 0.5 * np.sin(2 * np.pi * 9 * t))
+        return (s_ + gurgle) * env_ar(n, 0.1, 0.3)
+    if name == "whisk":
+        out = np.zeros(int(SR * 0.9))
+        for i in range(9):
+            place(out, band(noise(0.07, 20 + i), 1500, 6000) * env_ar(int(SR * 0.07), 0.01, 0.05), i * 0.09)
+        return out
+    if name == "ice":
+        out = np.zeros(int(SR * 0.7))
+        rng = np.random.default_rng(12)
+        for i in range(4):
+            f = rng.uniform(2200, 3800)
+            k = int(SR * 0.25)
+            tt = np.arange(k) / SR
+            clink = (np.sin(2 * np.pi * f * tt) + 0.5 * np.sin(2 * np.pi * f * 2.76 * tt)) * np.exp(-tt * 28)
+            place(out, clink * 0.4, i * 0.11 + rng.uniform(0, 0.04))
+        return out
+    if name == "cream":
+        n = int(SR * 0.9)
+        t = np.arange(n) / SR
+        return band(noise(0.9, 13), 3000, 10000) * (1 - t / 0.9) * env_ar(n, 0.02, 0.1) * 0.8
+    if name == "sprinkle":
+        out = np.zeros(int(SR * 0.7))
+        rng = np.random.default_rng(14)
+        for i in range(14):
+            k = int(SR * 0.02)
+            place(out, band(noise(0.02, 30 + i), 4000, 10000) * np.exp(-np.arange(k) / SR * 200) * rng.uniform(0.3, 0.8), rng.uniform(0, 0.6))
+        return out
+    if name == "bell":
+        out = np.zeros(int(SR * 1.5))
+        for i, n_ in enumerate([88, 84]):
+            k = int(SR * 1.2)
+            tt = np.arange(k) / SR
+            f = midi(n_)
+            place(out, (np.sin(2 * np.pi * f * tt) + 0.4 * np.sin(2 * np.pi * f * 2.4 * tt)) * np.exp(-tt * 4) * 0.4, i * 0.18)
+        return out
+    if name == "trash":
+        n = int(SR * 0.5)
+        t = np.arange(n) / SR
+        return band(noise(0.5, 15), 300, 3000) * np.sin(np.pi * t / 0.5) * 0.7
     if name == "pop":
         t = np.arange(int(SR * 0.12)) / SR
         f = 500 + 900 * np.exp(-t * 40)
@@ -105,9 +225,9 @@ def sfx(name):
         return out
     if name == "purr":
         t = np.arange(int(SR * 1.2)) / SR
-        noise = np.random.default_rng(3).normal(0, 1, len(t))
+        purr_noise = np.random.default_rng(3).normal(0, 1, len(t))
         # bruit filtré grossièrement + modulation à ~25 Hz = ronronnement
-        smooth = np.convolve(noise, np.ones(60) / 60, mode="same")
+        smooth = np.convolve(purr_noise, np.ones(60) / 60, mode="same")
         return smooth * (0.5 + 0.5 * np.sin(2 * np.pi * 25 * t)) * np.minimum(1, t * 8) * np.minimum(1, (1.2 - t) * 4) * 2.5
     if name == "sad":
         out = np.zeros(int(SR * 1.0))
