@@ -1,6 +1,16 @@
 package com.meowcha.game.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.meowcha.game.game.News
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -278,4 +288,58 @@ private fun CuteField(
         ),
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+/* ------------------------------ Fenêtre « Quoi de neuf ? » ------------------------------ */
+
+@Composable
+fun NewsDialog(news: News, onDismiss: () -> Unit) {
+    val pop = remember { Animatable(0.6f) }
+    LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow)) }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.padding(20.dp).fillMaxWidth()
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                .shadow(12.dp, RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(32.dp))
+                .background(Brush.verticalGradient(listOf(Pink.Light, Color.White)))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.fillMaxWidth().height(90.dp), contentAlignment = Alignment.Center) {
+                FloatingHearts(Modifier.fillMaxSize())
+                Text("✨🎀✨", fontSize = 40.sp)
+            }
+            Title(news.title, 30)
+            Spacer(Modifier.height(12.dp))
+            if (news.cats.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    news.cats.forEach { cat ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(78.dp).clip(CircleShape).background(Color.White)) {
+                                CatPortrait(cat, Mood.DELIGHTED, Modifier.fillMaxSize())
+                            }
+                            Text(cat.name, fontWeight = FontWeight.Bold, color = Pink.Deep, fontSize = 13.sp)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 300.dp).verticalScroll(rememberScrollState())
+                    .clip(RoundedCornerShape(20.dp)).background(Color.White).padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                news.lines.forEach { (emoji, text) ->
+                    Row {
+                        Text(emoji, fontSize = 18.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Text(text, color = Pink.Text, fontSize = 14.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            CuteButton("💖 Trop bien !", Modifier.fillMaxWidth(), Pink.Deep, onClick = onDismiss)
+        }
+    }
 }

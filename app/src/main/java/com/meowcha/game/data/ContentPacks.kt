@@ -33,8 +33,17 @@ data class RemotePack(
 )
 
 /** Contenu issu des packs installés, utilisé par le jeu. */
+data class PackInfo(
+    val id: String,
+    val name: String,
+    val description: String,
+    val cats: List<CatCustomer>,
+    val recipes: List<Recipe>,
+    val hasMusic: Boolean,
+)
+
 data class InstalledContent(
-    val packs: List<String>,
+    val packs: List<PackInfo>,
     val music: Map<String, File>,
     val sfx: Map<String, File>,
 )
@@ -47,7 +56,7 @@ sealed interface SyncEvent {
 
 sealed interface SyncResult {
     data class UpToDate(val installed: Int) : SyncResult
-    data class Updated(val names: List<String>) : SyncResult
+    data class Updated(val ids: List<String>, val names: List<String>) : SyncResult
     data class Offline(val reason: String) : SyncResult
 }
 
@@ -83,16 +92,16 @@ class ContentPacks(private val context: Context) {
         val updates = checkUpdates()
             ?: return SyncResult.Offline("Hors ligne — on garde le contenu déjà installé")
         if (updates.isEmpty()) return SyncResult.UpToDate(root.listFiles()?.size ?: 0)
-        val done = mutableListOf<String>()
+        val done = mutableListOf<RemotePack>()
         for ((i, pack) in updates.withIndex()) {
             val ok = runCatching { download(pack, i, updates.size, onEvent) }.getOrElse { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 false
             }
-            if (ok) done += pack.name
+            if (ok) done += pack
         }
         return if (done.isEmpty()) SyncResult.Offline("Téléchargement interrompu, on réessaiera au prochain lancement")
-        else SyncResult.Updated(done)
+        else SyncResult.Updated(done.map { it.id }, done.map { it.name })
     }
 
     private suspend fun download(pack: RemotePack, index: Int, count: Int, onEvent: (SyncEvent) -> Unit): Boolean =
@@ -155,11 +164,12 @@ class ContentPacks(private val context: Context) {
         val recipes = mutableListOf<Recipe>()
         val music = mutableMapOf<String, File>()
         val sfx = mutableMapOf<String, File>()
-        val packs = mutableListOf<String>()
+        val packs = mutableListOf<PackInfo>()
         root.listFiles()?.filter { it.isDirectory && !it.name.endsWith(".new") }?.sortedBy { it.name }?.forEach { dir ->
             runCatching {
                 val m = JSONObject(File(dir, "manifest.json").readText())
-                packs += m.getString("name")
+                val catsBefore = cats.size
+                val recipesBefore = recipes.size
                 m.optJSONArray("cats")?.let { arr ->
                     for (i in 0 until arr.length()) {
                         val c = arr.getJSONObject(i)
@@ -186,6 +196,10 @@ class ContentPacks(private val context: Context) {
                     }
                 }
                 m.optJSONObject("music")?.let { o -> o.keys().forEach { k -> music[k] = File(dir, o.getString(k)) } }
+                packs += PackInfo(
+                    m.getString("id"), m.getString("name"), m.optString("description"),
+                    cats.drop(catsBefore), recipes.drop(recipesBefore), m.has("music"),
+                )
                 m.optJSONObject("sfx")?.let { o -> o.keys().forEach { k -> sfx[k] = File(dir, o.getString(k)) } }
             }
         }

@@ -14,6 +14,7 @@
 - Premier pack « Printemps Sakura » (~19 Mo) : musique du café et de l'accueil, bruitages
   (ronronnement, pièces, boisson parfaite…), 3 nouvelles chattes et 2 recettes
 - Bouton pour couper le son sur l'accueil
+- Fenêtre « Quoi de neuf ? » après un téléchargement ou au premier lancement d'une nouvelle version
 
 ## 1.0.0
 - Première version : service des chats, 14 recettes, 14 ingrédients, boutique de 9 mugs,

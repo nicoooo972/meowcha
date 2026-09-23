@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.meowcha.game.data.AccountEntity
 import com.meowcha.game.data.AccountRepository
 import com.meowcha.game.data.AuthResult
+import com.meowcha.game.BuildConfig
 import com.meowcha.game.data.ContentPacks
+import com.meowcha.game.data.PackInfo
 import com.meowcha.game.data.SyncEvent
 import com.meowcha.game.data.SyncResult
 import kotlinx.coroutines.Job
@@ -34,6 +36,13 @@ sealed interface SessionState {
     data class LoggedIn(val account: AccountEntity) : SessionState
 }
 
+/** Contenu de la fenêtre « Quoi de neuf ? ». */
+data class News(
+    val title: String,
+    val lines: List<Pair<String, String>>,
+    val cats: List<CatCustomer>,
+)
+
 class SessionViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = AccountRepository(app)
 
@@ -42,6 +51,11 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _news = MutableStateFlow<News?>(null)
+    val news: StateFlow<News?> = _news.asStateFlow()
+
+    fun dismissNews() { _news.value = null }
 
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
@@ -57,6 +71,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
             }
             show(0.05f, "Recherche de nouveautés...")
 
+            var updatedIds = emptyList<String>()
             // 1. Téléchargement des packs de contenu (annulable avec "Plus tard")
             val job = launch {
                 val result = content.sync { e ->
@@ -76,7 +91,10 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 when (result) {
-                    is SyncResult.Updated -> show(0.95f, "Nouveautés installées ✨", result.names.joinToString())
+                    is SyncResult.Updated -> {
+                        updatedIds = result.ids
+                        show(0.95f, "Nouveautés installées ✨", result.names.joinToString())
+                    }
                     is SyncResult.Offline -> show(0.95f, "Ouverture du café...", result.reason)
                     is SyncResult.UpToDate -> show(0.95f, "Tout est à jour 💖")
                 }
@@ -91,10 +109,35 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
             Audio.init(app, installed.music, installed.sfx)
             val session = withContext(Dispatchers.IO) { repo.currentSession() }
             val profiles = withContext(Dispatchers.IO) { repo.accounts() }
+            _news.value = buildNews(app, installed.packs.filter { it.id in updatedIds })
             show(1f, "C'est prêt !")
             delay(250)
             _state.value = session?.let { SessionState.LoggedIn(it) } ?: SessionState.LoggedOut(profiles)
         }
+    }
+
+    /** Nouveautés = packs tout juste téléchargés + notes de version si l'app vient d'être mise à jour. */
+    private fun buildNews(app: Application, packs: List<PackInfo>): News? {
+        val prefs = app.getSharedPreferences("meowcha_settings", android.content.Context.MODE_PRIVATE)
+        val seen = prefs.getString("seen_version", null)
+        val current = BuildConfig.VERSION_NAME
+        prefs.edit().putString("seen_version", current).apply()
+        val appNotes = if (seen != current) RELEASE_NOTES[current].orEmpty() else emptyList()
+
+        val lines = mutableListOf<Pair<String, String>>()
+        lines += appNotes
+        packs.forEach { p ->
+            lines += "📦" to "${p.name} : ${p.description}"
+            if (p.cats.isNotEmpty()) lines += "🐱" to "Nouvelles clientes : ${p.cats.joinToString { it.name }}"
+            if (p.recipes.isNotEmpty()) lines += "☕" to "Nouvelles recettes : ${p.recipes.joinToString { "${it.name} (jour ${it.unlockDay})" }}"
+            if (p.hasMusic) lines += "🎵" to "Musique d'ambiance et bruitages"
+        }
+        if (lines.isEmpty()) return null
+        return News(
+            title = if (appNotes.isNotEmpty()) "Quoi de neuf dans la v$current ?" else "Nouveautés téléchargées !",
+            lines = lines,
+            cats = packs.flatMap { it.cats },
+        )
     }
 
     /** Bouton "Plus tard" pendant un téléchargement : on continue sans les nouveautés. */
@@ -132,6 +175,19 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** Points forts affichés au premier lancement de chaque version. */
+        val RELEASE_NOTES = mapOf(
+            "1.1.0" to listOf(
+                "👤" to "Comptes : plusieurs profils sur le même téléphone",
+                "🔥" to "Combos : enchaîne les boissons parfaites pour plus de pourboires",
+                "🐾" to "Caresse les chats pour leur redonner de la patience",
+                "👑" to "Chats VIP : ils paient double mais sont pressés",
+                "🎯" to "3 objectifs par jour avec des récompenses",
+                "🪴" to "Décorations pour ton café, avec des bonus",
+                "📦" to "Contenu téléchargeable : de nouveaux chats sans mettre à jour l'app",
+            ),
+        )
+
         val TIPS = listOf(
             "Astuce : caresse un chat pour lui redonner de la patience 🐾",
             "Astuce : enchaîne les boissons parfaites pour faire grimper ton combo 🔥",

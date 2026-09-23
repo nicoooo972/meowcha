@@ -100,6 +100,7 @@ enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES }
 @Composable
 fun MeowchaApp(session: SessionViewModel = viewModel()) {
     val state by session.state.collectAsState()
+    val news by session.news.collectAsState()
     Box(
         Modifier
             .fillMaxSize()
@@ -119,6 +120,9 @@ fun MeowchaApp(session: SessionViewModel = viewModel()) {
                 is SessionState.LoggedIn -> CafeApp(s.account, onLogout = session::logout)
             }
         }
+        // Affichée une fois le chargement terminé
+        val n = news
+        if (n != null && state !is SessionState.Loading) NewsDialog(n, onDismiss = session::dismissNews)
     }
 }
 
