@@ -36,7 +36,7 @@ data class Recipe(
 )
 
 object Recipes {
-    val all = listOf(
+    private val base = listOf(
         Recipe("espresso", "Espresso Minou", listOf(Ingredient.ESPRESSO), 3, 1),
         Recipe("americano", "Americano", listOf(Ingredient.ESPRESSO, Ingredient.WATER), 4, 1),
         Recipe("latte", "Latte Câlin", listOf(Ingredient.ESPRESSO, Ingredient.MILK, Ingredient.FOAM), 5, 1),
@@ -52,6 +52,14 @@ object Recipes {
         Recipe("sakuramatcha", "Sakura Matcha", listOf(Ingredient.MATCHA, Ingredient.STRAWBERRY, Ingredient.MILK, Ingredient.SAKURA), 9, 5),
         Recipe("special", "Meowcha Spécial", listOf(Ingredient.MATCHA, Ingredient.ESPRESSO, Ingredient.MILK, Ingredient.CREAM, Ingredient.SAKURA), 12, 6),
     )
+
+    /** Recettes de base + celles des packs de contenu téléchargés. */
+    @Volatile var all: List<Recipe> = base
+        private set
+
+    fun setExtra(extra: List<Recipe>) {
+        all = base + extra.filter { e -> base.none { it.id == e.id } }
+    }
 
     fun available(day: Int) = all.filter { it.unlockDay <= day }
 }
@@ -73,7 +81,7 @@ data class CatCustomer(
 )
 
 object Cats {
-    val all = listOf(
+    private val base = listOf(
         CatCustomer("mochi", "Mochi", Color(0xFFFFFFFF), Color(0xFFF8BBD0), Color(0xFF4FC3F7), FurPattern.PLAIN, Accessory.BOW, Color(0xFFFF4081), "pinklatte", "Un latte tout rose, s'il te plaît ~"),
         CatCustomer("caramel", "Caramel", Color(0xFFFFB74D), Color(0xFFE65100), Color(0xFF8BC34A), FurPattern.TABBY, Accessory.NONE, Color.Transparent, "caramelmac", "Miaou ! J'ai besoin de sucre !"),
         CatCustomer("sakura", "Sakura", Color(0xFFFFF3E0), Color(0xFFFF8A65), Color(0xFFFFB300), FurPattern.CALICO, Accessory.FLOWER, Color(0xFFFF80AB), "sakuramatcha", "Les fleurs sont jolies aujourd'hui !"),
@@ -88,7 +96,15 @@ object Cats {
         CatCustomer("tigrou", "Tigrou", Color(0xFFFFCC80), Color(0xFF8D6E63), Color(0xFF66BB6A), FurPattern.TABBY, Accessory.BELL, Color(0xFFE57373), "icedlatte", "Il fait trop chaud, un truc glacé !"),
     )
 
-    fun byId(id: String) = all.first { it.id == id }
+    /** Chats de base + ceux des packs de contenu téléchargés. */
+    @Volatile var all: List<CatCustomer> = base
+        private set
+
+    fun setExtra(extra: List<CatCustomer>) {
+        all = base + extra.filter { e -> base.none { it.id == e.id } }
+    }
+
+    fun byId(id: String) = all.firstOrNull { it.id == id } ?: base.first()
 }
 
 enum class MugPattern { NONE, DOTS, HEARTS, STRIPES, PAWS, STRAWBERRIES, FLOWERS }

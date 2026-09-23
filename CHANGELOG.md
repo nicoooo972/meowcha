@@ -9,6 +9,11 @@
 - Boutique de décorations (bonus de patience, pourboires, chance VIP) visibles dans le café
 - Interfaces : animations d'arrivée des chats, pop des résultats, bilan de journée détaillé,
   accueil avec profil, statistiques et objectifs, confirmation avant de fermer le café
+- Packs de contenu téléchargeables : l'écran de chargement cherche les nouveautés et les
+  télécharge avec une vraie progression (Mo téléchargés, vitesse, bouton « Plus tard »)
+- Premier pack « Printemps Sakura » (~19 Mo) : musique du café et de l'accueil, bruitages
+  (ronronnement, pièces, boisson parfaite…), 3 nouvelles chattes et 2 recettes
+- Bouton pour couper le son sur l'accueil
 
 ## 1.0.0
 - Première version : service des chats, 14 recettes, 14 ingrédients, boutique de 9 mugs,

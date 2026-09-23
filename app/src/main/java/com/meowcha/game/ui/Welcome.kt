@@ -58,12 +58,14 @@ import com.meowcha.game.game.Cats
 import com.meowcha.game.game.Ingredient
 import com.meowcha.game.game.Mood
 import com.meowcha.game.game.Mugs
+import com.meowcha.game.game.SessionState
 import com.meowcha.game.game.SessionViewModel
 
 /* ------------------------------ Écran de chargement ------------------------------ */
 
 @Composable
-fun LoadingScreen(progress: Float, tip: String) {
+fun LoadingScreen(state: SessionState.Loading, onSkip: () -> Unit) {
+    val progress = state.progress
     val anim = rememberInfiniteTransition(label = "loading")
     val bounce by anim.animateFloat(0f, -18f, infiniteRepeatable(tween(520), RepeatMode.Reverse), label = "bounce")
     val tilt by anim.animateFloat(-6f, 6f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "tilt")
@@ -86,13 +88,27 @@ fun LoadingScreen(progress: Float, tip: String) {
         }
         Spacer(Modifier.height(20.dp))
         Title("Meowcha Café", 44)
-        Text("chargement du café...", color = Pink.Text, fontSize = 14.sp)
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
+        Text(state.title, color = Pink.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(12.dp))
         PawProgress(shown, Modifier.fillMaxWidth().height(36.dp))
         Spacer(Modifier.height(8.dp))
         Text("${(shown * 100).toInt()} %", color = Pink.Deep, fontWeight = FontWeight.Bold)
+        state.detail?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, color = Pink.Text, fontSize = 13.sp, textAlign = TextAlign.Center)
+        }
+        if (state.canSkip) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Plus tard ›",
+                Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.7f)).clickable { onSkip() }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                color = Pink.Deep, fontWeight = FontWeight.Bold,
+            )
+        }
         Spacer(Modifier.height(28.dp))
-        Text(tip, color = Pink.Text, fontSize = 14.sp, textAlign = TextAlign.Center)
+        Text(state.tip, color = Pink.Text, fontSize = 14.sp, textAlign = TextAlign.Center)
     }
 }
 

@@ -20,6 +20,11 @@ android {
         targetSdk = 34
         versionCode = vMajor * 10000 + vMinor * 100 + vPatch
         versionName = appVersion
+        // Adresse où l'app va chercher les packs de contenu (index.json + zips)
+        buildConfigField(
+            "String", "CONTENT_URL",
+            "\"" + (System.getenv("CONTENT_URL") ?: "https://github.com/nicoooo972/meowcha/releases/download/content/") + "\"",
+        )
     }
 
     // Clé de signature fixe (fournie par les secrets CI) : indispensable pour que
@@ -50,6 +55,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

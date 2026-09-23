@@ -1,0 +1,45 @@
+name: Content packs
+
+# Construit les packs de contenu (musique, bruitages, chats, recettes) et les publie
+# dans la release GitHub "content", où l'application vient les télécharger.
+on:
+  push:
+    paths:
+      - "packs/**"
+      - "tools/make_packs.py"
+      - ".github/workflows/content.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  packs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build packs
+        run: |
+          pip install numpy
+          python tools/make_packs.py dist
+          ls -la dist
+
+      - name: Publish to the "content" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: content
+          name: Contenu téléchargeable
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          body: |
+            Packs de contenu téléchargés automatiquement par Meowcha Café au lancement.
+            Ne pas supprimer : l'application lit `index.json` ici.
+          files: |
+            dist/index.json
+            dist/*.zip

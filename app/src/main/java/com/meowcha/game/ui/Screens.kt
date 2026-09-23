@@ -81,6 +81,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.meowcha.game.data.AccountEntity
+import com.meowcha.game.game.Audio
 import com.meowcha.game.game.Cats
 import com.meowcha.game.game.DayState
 import com.meowcha.game.game.Decor
@@ -113,7 +114,7 @@ fun MeowchaApp(session: SessionViewModel = viewModel()) {
             label = "session",
         ) { s ->
             when (s) {
-                is SessionState.Loading -> LoadingScreen(s.progress, s.tip)
+                is SessionState.Loading -> LoadingScreen(s, onSkip = session::skipDownload)
                 is SessionState.LoggedOut -> AuthScreen(session, s.profiles)
                 is SessionState.LoggedIn -> CafeApp(s.account, onLogout = session::logout)
             }
@@ -137,6 +138,7 @@ private fun CafeApp(account: AccountEntity, onLogout: () -> Unit) {
         else { vm.quitDay(); screen = Screen.HOME }
     }
     BackHandler(enabled = screen != Screen.HOME) { back() }
+    LaunchedEffect(screen) { Audio.playMusic(if (screen == Screen.GAME) "cafe" else "home") }
 
     if (confirmQuit) {
         AlertDialog(
@@ -199,6 +201,16 @@ private fun HomeScreen(vm: GameViewModel, account: AccountEntity, onLogout: () -
             }
             Coins(player.coins)
             Spacer(Modifier.width(6.dp))
+            val ctx = LocalContext.current
+            var musicOn by remember { mutableStateOf(Audio.musicOn) }
+            if (Audio.hasContent) {
+                RoundIconButton(if (musicOn) "🔊" else "🔇") {
+                    musicOn = !musicOn
+                    Audio.setMusic(ctx, musicOn)
+                    Audio.setSfx(ctx, musicOn)
+                }
+                Spacer(Modifier.width(6.dp))
+            }
             RoundIconButton("⎋", onLogout)
         }
 
@@ -287,6 +299,9 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
     // Pop du badge de résultat
     val pop = remember(order.id) { Animatable(0f) }
     LaunchedEffect(s.lastResult) {
+        s.lastResult?.let { r ->
+            Audio.play(if (r.stars == 3) "perfect" else if (r.stars >= 2) "coin" else "sad")
+        }
         if (s.lastResult != null) pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow))
     }
 
@@ -328,6 +343,7 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                     }
                     .clickable(enabled = !s.reacting) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (!s.petted) Audio.play("purr")
                         vm.pet()
                     },
             ) {
@@ -415,6 +431,7 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                         .border(2.dp, ing.color.copy(alpha = 0.9f), RoundedCornerShape(14.dp))
                         .clickable(enabled = !s.reacting && s.cup.size < 6) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            Audio.play("add")
                             vm.add(ing)
                         }
                         .padding(vertical = 6.dp),
@@ -721,8 +738,8 @@ private fun AlbumScreen(vm: GameViewModel, onBack: () -> Unit) {
                         Text(cat.name, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Pink.Deep)
                         Text("💗".repeat((info.hearts + 1) / 2).ifEmpty { "🤍" }, fontSize = 12.sp)
                         Text("Servie ${info.timesServed}×", fontSize = 11.sp, color = Color.Gray)
-                        val fav = Recipes.all.first { it.id == cat.favorite }
-                        Text(if (info.hearts >= 3) "Adore : ${fav.name}" else "Préférence : ???", fontSize = 11.sp, color = Pink.Text, textAlign = TextAlign.Center)
+                        val fav = Recipes.all.firstOrNull { it.id == cat.favorite }
+                        Text(if (info.hearts >= 3 && fav != null) "Adore : ${fav.name}" else "Préférence : ???", fontSize = 11.sp, color = Pink.Text, textAlign = TextAlign.Center)
                         if (info.hearts >= 6) Text("« ${cat.quote} »", fontSize = 10.sp, color = Color.Gray, textAlign = TextAlign.Center)
                     } else {
                         Text("???", fontFamily = FontFamily.Cursive, fontSize = 20.sp, color = Color.Gray)

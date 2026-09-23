@@ -1,0 +1,132 @@
+{
+ "id": "sakura-spring",
+ "version": 1,
+ "name": "Printemps Sakura",
+ "description": "3 nouvelles chattes, 2 recettes printanières, la musique du café et les bruitages",
+ "cats": [
+  {
+   "id": "fraisette",
+   "name": "Fraisette",
+   "fur": "#FFE4EC",
+   "accent": "#FF8FAB",
+   "eyes": "#E91E63",
+   "pattern": "CALICO",
+   "accessory": "BOW",
+   "accessoryColor": "#E53935",
+   "favorite": "strawcloud",
+   "quote": "Tout ce qui est fraise, j'adore !"
+  },
+  {
+   "id": "hanami",
+   "name": "Hanami",
+   "fur": "#FFFFFF",
+   "accent": "#F8BBD0",
+   "eyes": "#7E57C2",
+   "pattern": "POINTS",
+   "accessory": "FLOWER",
+   "accessoryColor": "#FF80AB",
+   "favorite": "hanamilatte",
+   "quote": "Regarde, les cerisiers sont en fleurs..."
+  },
+  {
+   "id": "bonbon",
+   "name": "Bonbon",
+   "fur": "#FFCCBC",
+   "accent": "#A1887F",
+   "eyes": "#29B6F6",
+   "pattern": "TABBY",
+   "accessory": "CROWN",
+   "accessoryColor": "#CE93D8",
+   "favorite": "strawcloud",
+   "quote": "Plus de sucre, toujours plus de sucre !"
+  }
+ ],
+ "recipes": [
+  {
+   "id": "strawcloud",
+   "name": "Nuage Fraise",
+   "steps": [
+    "STRAWBERRY",
+    "MILK",
+    "CREAM",
+    "MARSHMALLOW"
+   ],
+   "price": 9,
+   "unlockDay": 4
+  },
+  {
+   "id": "hanamilatte",
+   "name": "Hanami Latte",
+   "steps": [
+    "TEA",
+    "STRAWBERRY",
+    "MILK",
+    "SAKURA"
+   ],
+   "price": 10,
+   "unlockDay": 5
+  }
+ ],
+ "music": {
+  "cafe": "music/cafe_theme.wav",
+  "home": "music/sakura_breeze.wav"
+ },
+ "sfx": {
+  "add": "sfx/pop.wav",
+  "perfect": "sfx/perfect.wav",
+  "coin": "sfx/coin.wav",
+  "purr": "sfx/purr.wav",
+  "sad": "sfx/sad.wav"
+ },
+ "generate": {
+  "cafe": {
+   "type": "song",
+   "file": "music/cafe_theme.wav",
+   "seconds": 128,
+   "bpm": 84,
+   "root": 60,
+   "progression": [
+    "C",
+    "AM",
+    "F",
+    "G"
+   ],
+   "seed": 7,
+   "swing": 0.25
+  },
+  "home": {
+   "type": "song",
+   "file": "music/sakura_breeze.wav",
+   "seconds": 96,
+   "bpm": 72,
+   "root": 65,
+   "progression": [
+    "C",
+    "EM",
+    "AM",
+    "F"
+   ],
+   "seed": 21
+  },
+  "add": {
+   "type": "pop",
+   "file": "sfx/pop.wav"
+  },
+  "perfect": {
+   "type": "perfect",
+   "file": "sfx/perfect.wav"
+  },
+  "coin": {
+   "type": "coin",
+   "file": "sfx/coin.wav"
+  },
+  "purr": {
+   "type": "purr",
+   "file": "sfx/purr.wav"
+  },
+  "sad": {
+   "type": "sad",
+   "file": "sfx/sad.wav"
+  }
+ }
+}

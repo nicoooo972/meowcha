@@ -42,3 +42,15 @@ base64 -w0 meowcha.jks   # à copier dans le secret KEYSTORE_BASE64
 Puis dans GitHub → Settings → Secrets and variables → Actions, ajoute :
 `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` (`meowcha`), `KEY_PASSWORD`.
 Garde bien le fichier `.jks` : sans lui, plus de mises à jour possibles.
+
+## 📦 Packs de contenu téléchargeables
+Au lancement, l'app lit `index.json` dans la release GitHub **`content`** et télécharge les packs
+nouveaux ou mis à jour (progression réelle, vérification SHA-256, reprise hors ligne avec le contenu déjà installé).
+
+- Un pack = un dossier `packs/<id>/manifest.json` : chats, recettes, musiques, bruitages.
+  Les sons sont générés par `tools/make_packs.py` (synthèse maison, pas de fichiers externes).
+- Pour publier une mise à jour de contenu : modifie le manifest, **incrémente `version`**, push.
+  Le workflow `Content packs` reconstruit les zips et met à jour la release `content`,
+  sans avoir à republier l'APK.
+- ⚠️ Le téléchargement se fait sans authentification : le dépôt (ou au moins ses releases) doit être
+  **public**. Sinon, change l'adresse avec la variable `CONTENT_URL` au moment du build.
