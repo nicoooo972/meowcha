@@ -28,6 +28,9 @@ Dernier APK : **[Releases → meowcha-cafe.apk](../../releases/latest)**
 - Pour publier une mise à jour : incrémente `VERSION`, ajoute une entrée dans `CHANGELOG.md`, push.
   La CI crée automatiquement le tag `vX.Y.Z` et la Release avec l'APK.
   Un push sans changement de version construit seulement l'APK (artefact), sans release.
+- Chaque nouvelle version se développe sur une branche à son nom (ex. `1.1.0`) : la CI y construit
+  un APK de test (onglet Actions → artefact) sans publier. La release est publiée une fois la
+  branche fusionnée dans la branche par défaut.
 
 ### Clé de signature (à faire une fois)
 Pour qu'une mise à jour s'installe par-dessus l'ancienne (en gardant la progression), l'APK doit
