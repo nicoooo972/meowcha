@@ -5,6 +5,11 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// Version unique définie dans le fichier VERSION à la racine (MAJEUR.MINEUR.CORRECTIF)
+val appVersion = rootProject.file("VERSION").readText().trim()
+val (vMajor, vMinor, vPatch) = appVersion.split(".").map { it.toInt() }
+val keystorePath: String? = System.getenv("KEYSTORE_PATH")
+
 android {
     namespace = "com.meowcha.game"
     compileSdk = 34
@@ -13,15 +18,27 @@ android {
         applicationId = "com.meowcha.game"
         minSdk = 24
         targetSdk = 34
-        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
-        versionName = System.getenv("VERSION_NAME") ?: "1.0"
+        versionCode = vMajor * 10000 + vMinor * 100 + vPatch
+        versionName = appVersion
+    }
+
+    // Clé de signature fixe (fournie par les secrets CI) : indispensable pour que
+    // les mises à jour s'installent par-dessus l'ancienne version.
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Signé avec la clé debug pour pouvoir être installé directement
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

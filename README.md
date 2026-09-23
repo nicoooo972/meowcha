@@ -21,3 +21,21 @@ Dernier APK : **[Releases → meowcha-cafe.apk](../../releases/latest)**
 - Kotlin + Jetpack Compose, tous les chats et mugs sont dessinés en code (Canvas), aucune image externe.
 - Sauvegarde locale avec Room (SQLite) : pièces, jour, mugs, chats rencontrés, historique.
 - Build via GitHub Actions (`.github/workflows/build.yml`) qui publie une Release avec l'APK à chaque push.
+
+## 🔢 Versioning & mises à jour
+- La version est dans le fichier [`VERSION`](VERSION) au format `MAJEUR.MINEUR.CORRECTIF` (SemVer).
+  Le `versionCode` Android en est déduit (`MAJ*10000 + MIN*100 + CORR`), il augmente donc toujours.
+- Pour publier une mise à jour : incrémente `VERSION`, ajoute une entrée dans `CHANGELOG.md`, push.
+  La CI crée automatiquement le tag `vX.Y.Z` et la Release avec l'APK.
+  Un push sans changement de version construit seulement l'APK (artefact), sans release.
+
+### Clé de signature (à faire une fois)
+Pour qu'une mise à jour s'installe par-dessus l'ancienne (en gardant la progression), l'APK doit
+toujours être signé avec la même clé :
+```bash
+keytool -genkeypair -keystore meowcha.jks -alias meowcha -keyalg RSA -keysize 2048 -validity 36500
+base64 -w0 meowcha.jks   # à copier dans le secret KEYSTORE_BASE64
+```
+Puis dans GitHub → Settings → Secrets and variables → Actions, ajoute :
+`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` (`meowcha`), `KEY_PASSWORD`.
+Garde bien le fichier `.jks` : sans lui, plus de mises à jour possibles.
