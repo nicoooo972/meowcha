@@ -1,15 +1,11 @@
 package com.meowcha.game.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -284,13 +280,9 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                     Text("En attente : " + "🐱".repeat(minOf(s.queue.size, 5)), fontSize = 11.sp, color = Pink.Text)
                 }
             }
-            AnimatedVisibility(
-                visible = s.lastResult != null,
-                enter = scaleIn() + fadeIn(), exit = fadeOut(),
-                modifier = Modifier.align(Alignment.Center),
-            ) {
-                val r = s.lastResult
-                if (r != null) ResultBadge(r.stars, r.coins + r.tip, r.photo)
+            val r = s.lastResult
+            if (r != null) {
+                Box(Modifier.align(Alignment.Center)) { ResultBadge(r.stars, r.coins + r.tip, r.photo) }
             }
         }
 
