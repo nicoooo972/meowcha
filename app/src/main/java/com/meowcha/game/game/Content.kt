@@ -120,3 +120,69 @@ object Mugs {
 
     fun byId(id: String) = all.firstOrNull { it.id == id } ?: all.first()
 }
+
+enum class DecorBonus { PATIENCE, TIPS, VIP }
+
+/** Décorations du café : visibles dans le décor et donnent un petit bonus. */
+data class Decor(
+    val id: String,
+    val name: String,
+    val emoji: String,
+    val price: Int,
+    val bonus: DecorBonus,
+    val amount: Int,
+    val description: String,
+)
+
+object Decors {
+    val all = listOf(
+        Decor("plant", "Plante en pot", "🪴", 40, DecorBonus.PATIENCE, 5, "Les chats sont plus zen : +5% de patience"),
+        Decor("garland", "Guirlande lumineuse", "✨", 70, DecorBonus.TIPS, 5, "Ambiance cosy : +5% de pourboires"),
+        Decor("rug", "Tapis rose moelleux", "🧶", 90, DecorBonus.PATIENCE, 8, "Doux sous les pattes : +8% de patience"),
+        Decor("painting", "Portrait de chat", "🖼️", 120, DecorBonus.TIPS, 8, "Très chic : +8% de pourboires"),
+        Decor("cattree", "Arbre à chat", "🐈", 180, DecorBonus.VIP, 10, "Attire les chats VIP : +10% de chance"),
+        Decor("lamp", "Lampe nuage", "☁️", 220, DecorBonus.PATIENCE, 12, "Lumière douce : +12% de patience"),
+        Decor("piano", "Petit piano rose", "🎹", 350, DecorBonus.TIPS, 15, "Musique douce : +15% de pourboires"),
+    )
+
+    fun bonus(owned: Set<String>, type: DecorBonus) =
+        all.filter { it.id in owned && it.bonus == type }.sumOf { it.amount }
+}
+
+enum class ObjectiveType { PERFECT, COMBO, VIP, NO_LEAVE, COINS, PETS }
+
+/** Objectif du jour, avec sa récompense en pièces. */
+data class Objective(val type: ObjectiveType, val target: Int, val reward: Int) {
+    val label: String
+        get() = when (type) {
+            ObjectiveType.PERFECT -> "Servir $target boissons parfaites"
+            ObjectiveType.COMBO -> "Atteindre un combo x$target"
+            ObjectiveType.VIP -> "Servir parfaitement $target chat VIP"
+            ObjectiveType.NO_LEAVE -> "Aucun chat ne part fâché"
+            ObjectiveType.COINS -> "Gagner $target pièces"
+            ObjectiveType.PETS -> "Caresser $target chats"
+        }
+    val emoji: String
+        get() = when (type) {
+            ObjectiveType.PERFECT -> "⭐"
+            ObjectiveType.COMBO -> "🔥"
+            ObjectiveType.VIP -> "👑"
+            ObjectiveType.NO_LEAVE -> "💗"
+            ObjectiveType.COINS -> "🪙"
+            ObjectiveType.PETS -> "🐾"
+        }
+
+    companion object {
+        fun forDay(day: Int, customers: Int): List<Objective> {
+            val pool = listOf(
+                Objective(ObjectiveType.PERFECT, (customers * 0.6f).toInt().coerceAtLeast(2), 10 + day * 2),
+                Objective(ObjectiveType.COMBO, (2 + day / 2).coerceAtMost(6), 12 + day * 2),
+                Objective(ObjectiveType.VIP, 1, 15 + day),
+                Objective(ObjectiveType.NO_LEAVE, 1, 10 + day * 2),
+                Objective(ObjectiveType.COINS, customers * 5, 8 + day * 2),
+                Objective(ObjectiveType.PETS, (customers / 2).coerceAtLeast(2), 8 + day),
+            )
+            return pool.shuffled(kotlin.random.Random(day * 7919L)).take(3)
+        }
+    }
+}

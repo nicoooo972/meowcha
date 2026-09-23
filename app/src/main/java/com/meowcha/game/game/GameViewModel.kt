@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.meowcha.game.data.CatMetEntity
 import com.meowcha.game.data.DayHistoryEntity
 import com.meowcha.game.data.MeowchaDb
+import com.meowcha.game.data.OwnedDecorEntity
 import com.meowcha.game.data.OwnedMugEntity
 import com.meowcha.game.data.PlayerEntity
 import kotlinx.coroutines.Job
@@ -23,7 +24,7 @@ import kotlin.random.Random
 
 enum class Mood { HAPPY, WAITING, IMPATIENT, SAD, DELIGHTED }
 
-data class Order(val cat: CatCustomer, val recipe: Recipe, val patienceMax: Float)
+data class Order(val id: Int, val cat: CatCustomer, val recipe: Recipe, val patienceMax: Float, val vip: Boolean)
 
 data class ServeResult(
     val stars: Int,
@@ -31,6 +32,7 @@ data class ServeResult(
     val tip: Int,
     val message: String,
     val photo: Boolean,
+    val combo: Int,
 )
 
 data class DayState(
@@ -44,14 +46,36 @@ data class DayState(
     val coinsToday: Int = 0,
     val served: Int = 0,
     val perfect: Int = 0,
+    val left: Int = 0,
+    val combo: Int = 0,
+    val bestCombo: Int = 0,
+    val vipPerfect: Int = 0,
+    val pets: Int = 0,
+    /** Le chat actuel a déjà été caressé (une fois par client). */
+    val petted: Boolean = false,
+    /** Compteur incrémenté à chaque caresse pour déclencher l'animation. */
+    val petPulse: Int = 0,
+    val objectives: List<Objective>,
     val finished: Boolean = false,
+    val objectiveRewards: Int = 0,
     val totalCustomers: Int,
-    /** Gel visuel pendant la réaction du chat après le service. */
+    /** Gel pendant la réaction du chat après le service. */
     val reacting: Boolean = false,
-)
+) {
+    fun progress(o: Objective): Int = when (o.type) {
+        ObjectiveType.PERFECT -> perfect
+        ObjectiveType.COMBO -> bestCombo
+        ObjectiveType.VIP -> vipPerfect
+        ObjectiveType.NO_LEAVE -> if (finished && left == 0) 1 else 0
+        ObjectiveType.COINS -> coinsToday
+        ObjectiveType.PETS -> pets
+    }
 
-class GameViewModel(app: Application) : AndroidViewModel(app) {
-    private val dao = MeowchaDb.get(app).dao()
+    fun done(o: Objective) = progress(o) >= o.target
+}
+
+class GameViewModel(app: Application, val username: String) : AndroidViewModel(app) {
+    private val dao = MeowchaDb.get(app, username).dao()
 
     val player: StateFlow<PlayerEntity> = dao.player()
         .map { it ?: PlayerEntity() }
@@ -59,6 +83,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     val ownedMugs: StateFlow<Set<String>> = dao.ownedMugs()
         .map { list -> list.map { it.mugId }.toSet() + "classic" }
         .stateIn(viewModelScope, SharingStarted.Eagerly, setOf("classic"))
+    val ownedDecor: StateFlow<Set<String>> = dao.ownedDecor()
+        .map { list -> list.map { it.decorId }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val catsMet: StateFlow<Map<String, CatMetEntity>> = dao.catsMet()
         .map { list -> list.associateBy { it.catId } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
@@ -76,17 +103,30 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Objectifs prévus pour la prochaine journée (affichés sur l'accueil). */
+    fun upcomingObjectives(day: Int) = Objective.forDay(day, customersFor(day))
+
+    private fun customersFor(day: Int) = (4 + day).coerceAtMost(12)
+
     fun startDay() {
         val p = player.value
+        val decor = ownedDecor.value
         val recipes = Recipes.available(p.day)
-        val count = (4 + p.day).coerceAtMost(12)
-        val patience = (40f - p.day * 2f).coerceAtLeast(20f)
-        val orders = List(count) {
+        val count = customersFor(p.day)
+        val objectives = upcomingObjectives(p.day)
+        val patienceBonus = 1f + Decors.bonus(decor, DecorBonus.PATIENCE) / 100f
+        val basePatience = (40f - p.day * 2f).coerceAtLeast(20f) * patienceBonus
+        val vipChance = 0.1f + Decors.bonus(decor, DecorBonus.VIP) / 100f
+        val forceVip = if (objectives.any { it.type == ObjectiveType.VIP }) Random.nextInt(1, count) else -1
+
+        val orders = List(count) { i ->
             val cat = Cats.all.random()
             val fav = recipes.firstOrNull { it.id == cat.favorite }
             // Les chats commandent souvent leur boisson préférée si elle est débloquée
             val recipe = if (fav != null && Random.nextFloat() < 0.4f) fav else recipes.random()
-            Order(cat, recipe, patience + recipe.steps.size * 3f)
+            val vip = i > 0 && (i == forceVip || Random.nextFloat() < vipChance)
+            val patience = (basePatience + recipe.steps.size * 3f) * if (vip) 0.75f else 1f
+            Order(i, cat, recipe, patience, vip)
         }
         _day.value = DayState(
             day = p.day,
@@ -94,6 +134,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             current = orders.first(),
             patienceLeft = orders.first().patienceMax,
             totalCustomers = count,
+            objectives = objectives,
         )
         startTicker()
     }
@@ -105,7 +146,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 delay(100)
                 val s = _day.value ?: break
                 if (s.finished) break
-                if (s.reacting || s.current == null) continue
+                val current = s.current
+                if (s.reacting || current == null) continue
                 val left = s.patienceLeft - 0.1f
                 if (left <= 0f) {
                     _day.update {
@@ -113,13 +155,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                             patienceLeft = 0f,
                             mood = Mood.SAD,
                             reacting = true,
-                            lastResult = ServeResult(0, 0, 0, "${s.current.cat.name} est partie triste... 😿", false),
+                            combo = 0,
+                            left = it.left + 1,
+                            lastResult = ServeResult(0, 0, 0, "${current.cat.name} est partie fâchée... 😿", false, 0),
                         )
                     }
                     delay(1600)
                     nextCustomer()
                 } else {
-                    val ratio = left / s.current.patienceMax
+                    val ratio = left / current.patienceMax
                     val mood = when {
                         ratio > 0.6f -> Mood.HAPPY
                         ratio > 0.3f -> Mood.WAITING
@@ -137,8 +181,27 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun undo() {
+        _day.update { if (it == null || it.reacting) it else it.copy(cup = it.cup.dropLast(1)) }
+    }
+
     fun trash() {
         _day.update { if (it == null || it.reacting) it else it.copy(cup = emptyList()) }
+    }
+
+    /** Caresser le chat : il ronronne et gagne un peu de patience (une fois par client). */
+    fun pet() {
+        _day.update { s ->
+            val order = s?.current
+            if (s == null || order == null || s.reacting) return@update s
+            if (s.petted) return@update s.copy(petPulse = s.petPulse + 1)
+            s.copy(
+                petted = true,
+                pets = s.pets + 1,
+                petPulse = s.petPulse + 1,
+                patienceLeft = (s.patienceLeft + order.patienceMax * 0.2f).coerceAtMost(order.patienceMax),
+            )
+        }
     }
 
     fun serve() {
@@ -148,18 +211,22 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
         val stars = grade(order.recipe.steps, s.cup)
         val mug = Mugs.byId(player.value.equippedMug)
+        val price = order.recipe.price * if (order.vip) 2 else 1
         val base = when (stars) {
-            3 -> order.recipe.price
-            2 -> (order.recipe.price * 0.7f).roundToInt()
-            1 -> (order.recipe.price * 0.3f).roundToInt()
+            3 -> price
+            2 -> (price * 0.7f).roundToInt()
+            1 -> (price * 0.3f).roundToInt()
             else -> 0
         }
+        val combo = if (stars == 3) s.combo + 1 else 0
         val ratio = s.patienceLeft / order.patienceMax
-        val rawTip = if (stars >= 2) (ratio * 4f).roundToInt() else 0
-        val tip = rawTip + (rawTip * mug.tipBonus / 100f).roundToInt() + if (stars == 3 && rawTip > 0 && mug.tipBonus > 0) 1 else 0
+        val rawTip = if (stars >= 2) (ratio * 4f).roundToInt() + 1 else 0
+        val tipBonus = mug.tipBonus + Decors.bonus(ownedDecor.value, DecorBonus.TIPS)
+        val comboMult = 1f + 0.25f * (combo - 1).coerceIn(0, 4)
+        val tip = (rawTip * (1f + tipBonus / 100f) * comboMult).roundToInt()
         val photo = stars == 3 && ratio > 0.5f
         val msg = when (stars) {
-            3 -> listOf("Purrrfait ! 💖", "Miaou-gnifique ! ✨", "C'est exactement ça ! 😻").random()
+            3 -> if (order.vip) "Digne d'une reine ! 👑" else listOf("Purrrfait ! 💖", "Miaou-gnifique ! ✨", "C'est exactement ça ! 😻").random()
             2 -> "Presque parfait, merci ! 😺"
             1 -> "Hmm... c'est bizarre. 🙀"
             else -> "Ce n'est pas du tout ça ! 😾"
@@ -168,10 +235,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             it?.copy(
                 reacting = true,
                 mood = if (stars >= 2) Mood.DELIGHTED else Mood.SAD,
-                lastResult = ServeResult(stars, base, tip, msg, photo),
+                lastResult = ServeResult(stars, base, tip, msg, photo, combo),
                 coinsToday = it.coinsToday + base + tip,
                 served = it.served + 1,
                 perfect = it.perfect + if (stars == 3) 1 else 0,
+                vipPerfect = it.vipPerfect + if (stars == 3 && order.vip) 1 else 0,
+                combo = combo,
+                bestCombo = maxOf(it.bestCombo, combo),
             )
         }
         viewModelScope.launch {
@@ -191,8 +261,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         val s = _day.value ?: return
         val next = s.queue.firstOrNull()
         if (next == null) {
-            _day.value = s.copy(current = null, finished = true, reacting = false, cup = emptyList())
-            finishDay(s)
+            val ended = s.copy(current = null, finished = true, reacting = false, cup = emptyList())
+            val rewards = ended.objectives.filter { ended.done(it) }.sumOf { it.reward }
+            _day.value = ended.copy(objectiveRewards = rewards)
+            finishDay(ended, rewards)
         } else {
             _day.value = s.copy(
                 current = next,
@@ -201,24 +273,26 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                 cup = emptyList(),
                 mood = Mood.HAPPY,
                 reacting = false,
+                petted = false,
                 lastResult = null,
             )
         }
     }
 
-    private fun finishDay(s: DayState) {
+    private fun finishDay(s: DayState, rewards: Int) {
         viewModelScope.launch {
             val p = dao.playerNow() ?: PlayerEntity()
             dao.savePlayer(
                 p.copy(
-                    coins = p.coins + s.coinsToday,
+                    coins = p.coins + s.coinsToday + rewards,
                     day = p.day + 1,
                     totalServed = p.totalServed + s.served,
                     perfectServed = p.perfectServed + s.perfect,
                     bestDayCoins = maxOf(p.bestDayCoins, s.coinsToday),
+                    bestCombo = maxOf(p.bestCombo, s.bestCombo),
                 )
             )
-            dao.addHistory(DayHistoryEntity(day = s.day, coins = s.coinsToday, served = s.served, perfect = s.perfect))
+            dao.addHistory(DayHistoryEntity(day = s.day, coins = s.coinsToday + rewards, served = s.served, perfect = s.perfect))
         }
     }
 
@@ -240,6 +314,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val p = dao.playerNow() ?: return@launch
             if (mug.id in ownedMugs.value) dao.savePlayer(p.copy(equippedMug = mug.id))
+        }
+    }
+
+    fun buyDecor(decor: Decor) {
+        viewModelScope.launch {
+            val p = dao.playerNow() ?: return@launch
+            if (decor.id in ownedDecor.value || p.coins < decor.price) return@launch
+            dao.addDecor(OwnedDecorEntity(decor.id))
+            dao.savePlayer(p.copy(coins = p.coins - decor.price))
         }
     }
 

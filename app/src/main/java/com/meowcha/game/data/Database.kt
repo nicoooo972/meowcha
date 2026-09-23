@@ -1,6 +1,7 @@
 package com.meowcha.game.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -10,6 +11,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /** Progression globale de la joueuse (une seule ligne, id = 0). */
@@ -22,12 +25,20 @@ data class PlayerEntity(
     val perfectServed: Int = 0,
     val equippedMug: String = "classic",
     val bestDayCoins: Int = 0,
+    @ColumnInfo(defaultValue = "0") val bestCombo: Int = 0,
 )
 
 /** Mugs achetés dans la boutique. */
 @Entity(tableName = "owned_mugs")
 data class OwnedMugEntity(
     @PrimaryKey val mugId: String,
+    val boughtAt: Long = System.currentTimeMillis(),
+)
+
+/** Décorations achetées pour le café. */
+@Entity(tableName = "owned_decor")
+data class OwnedDecorEntity(
+    @PrimaryKey val decorId: String,
     val boughtAt: Long = System.currentTimeMillis(),
 )
 
@@ -67,6 +78,12 @@ interface GameDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addMug(m: OwnedMugEntity)
 
+    @Query("SELECT * FROM owned_decor")
+    fun ownedDecor(): Flow<List<OwnedDecorEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addDecor(d: OwnedDecorEntity)
+
     @Query("SELECT * FROM cats_met")
     fun catsMet(): Flow<List<CatMetEntity>>
 
@@ -84,20 +101,33 @@ interface GameDao {
 }
 
 @Database(
-    entities = [PlayerEntity::class, OwnedMugEntity::class, CatMetEntity::class, DayHistoryEntity::class],
-    version = 1,
+    entities = [PlayerEntity::class, OwnedMugEntity::class, OwnedDecorEntity::class, CatMetEntity::class, DayHistoryEntity::class],
+    version = 2,
     exportSchema = false,
 )
 abstract class MeowchaDb : RoomDatabase() {
     abstract fun dao(): GameDao
 
     companion object {
-        @Volatile private var instance: MeowchaDb? = null
+        private val instances = mutableMapOf<String, MeowchaDb>()
 
-        fun get(context: Context): MeowchaDb = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, MeowchaDb::class.java, "meowcha.db")
-                .fallbackToDestructiveMigration()
-                .build().also { instance = it }
+        /** Une base par compte : chaque profil a sa propre sauvegarde. */
+        fun fileName(username: String) = "meowcha_${username.lowercase()}.db"
+
+        fun get(context: Context, username: String): MeowchaDb = synchronized(this) {
+            instances.getOrPut(username.lowercase()) {
+                Room.databaseBuilder(context.applicationContext, MeowchaDb::class.java, fileName(username))
+                    .addMigrations(MIGRATION_1_2)
+                    .fallbackToDestructiveMigration()
+                    .build()
+            }
+        }
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE player ADD COLUMN bestCombo INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE TABLE IF NOT EXISTS owned_decor (decorId TEXT NOT NULL, boughtAt INTEGER NOT NULL, PRIMARY KEY(decorId))")
+            }
         }
     }
 }
