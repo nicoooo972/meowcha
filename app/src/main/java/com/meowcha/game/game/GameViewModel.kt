@@ -24,7 +24,7 @@ import kotlin.random.Random
 
 enum class Mood { HAPPY, WAITING, IMPATIENT, SAD, DELIGHTED }
 
-data class Order(val id: Int, val cat: CatCustomer, val recipe: Recipe, val patienceMax: Float, val vip: Boolean)
+data class Order(val id: Int, val cat: CatCustomer, val recipe: Recipe, val patienceMax: Float, val vip: Boolean, val rush: Boolean = false)
 
 data class ServeResult(
     val stars: Int,
@@ -33,6 +33,8 @@ data class ServeResult(
     val message: String,
     val photo: Boolean,
     val combo: Int,
+    /** Bonus offert quand la série du Rush du matin est tenue jusqu'au bout. */
+    val rushBonus: Int = 0,
 )
 
 data class DayState(
@@ -119,14 +121,21 @@ class GameViewModel(app: Application, val username: String) : AndroidViewModel(a
         val vipChance = 0.1f + Decors.bonus(decor, DecorBonus.VIP) / 100f
         val forceVip = if (objectives.any { it.type == ObjectiveType.VIP }) Random.nextInt(1, count) else -1
 
+        // Rush du matin : une fenêtre de 3 clients d'affilée, patience plus courte, prix x1.5.
+        val rushLength = 3
+        val rushStart = if (count >= 5) Random.nextInt(1, count - rushLength + 1) else -1
+        val rushRange = if (rushStart >= 0) rushStart until (rushStart + rushLength) else IntRange.EMPTY
+
         val orders = List(count) { i ->
             val cat = Cats.all.random()
             val fav = recipes.firstOrNull { it.id == cat.favorite }
             // Les chats commandent souvent leur boisson préférée si elle est débloquée
             val recipe = if (fav != null && Random.nextFloat() < 0.4f) fav else recipes.random()
-            val vip = i > 0 && (i == forceVip || Random.nextFloat() < vipChance)
-            val patience = (basePatience + recipe.steps.size * 3f) * if (vip) 0.75f else 1f
-            Order(i, cat, recipe, patience, vip)
+            val rush = i in rushRange
+            val vip = i > 0 && !rush && (i == forceVip || Random.nextFloat() < vipChance)
+            val patienceMult = if (vip) 0.75f else if (rush) 0.8f else 1f
+            val patience = (basePatience + recipe.steps.size * 3f) * patienceMult
+            Order(i, cat, recipe, patience, vip, rush)
         }
         _day.value = DayState(
             day = p.day,
@@ -211,9 +220,10 @@ class GameViewModel(app: Application, val username: String) : AndroidViewModel(a
 
         val stars = grade(order.recipe.steps, s.cup)
         val mug = Mugs.byId(player.value.equippedMug)
-        val price = order.recipe.price * if (order.vip) 2 else 1
+        val priceMult = (if (order.vip) 2f else 1f) * (if (order.rush) 1.5f else 1f)
+        val price = order.recipe.price * priceMult
         val base = when (stars) {
-            3 -> price
+            3 -> price.roundToInt()
             2 -> (price * 0.7f).roundToInt()
             1 -> (price * 0.3f).roundToInt()
             else -> 0
@@ -225,18 +235,22 @@ class GameViewModel(app: Application, val username: String) : AndroidViewModel(a
         val comboMult = 1f + 0.25f * (combo - 1).coerceIn(0, 4)
         val tip = (rawTip * (1f + tipBonus / 100f) * comboMult).roundToInt()
         val photo = stars == 3 && ratio > 0.5f
-        val msg = when (stars) {
-            3 -> if (order.vip) "Digne d'une reine ! 👑" else listOf("Purrrfait ! 💖", "Miaou-gnifique ! ✨", "C'est exactement ça ! 😻").random()
-            2 -> "Presque parfait, merci ! 😺"
-            1 -> "Hmm... c'est bizarre. 🙀"
+        // Bonus si la série du Rush du matin est tenue (2+ étoiles) jusqu'au dernier client de la fenêtre.
+        val rushEndsHere = order.rush && s.queue.firstOrNull()?.rush != true
+        val rushBonus = if (rushEndsHere && stars >= 2) 8 else 0
+        val msg = when {
+            stars == 3 && order.vip -> "Digne d'une reine ! 👑"
+            stars == 3 -> listOf("Purrrfait ! 💖", "Miaou-gnifique ! ✨", "C'est exactement ça ! 😻").random()
+            stars == 2 -> "Presque parfait, merci ! 😺"
+            stars == 1 -> "Hmm... c'est bizarre. 🙀"
             else -> "Ce n'est pas du tout ça ! 😾"
         }
         _day.update {
             it?.copy(
                 reacting = true,
                 mood = if (stars >= 2) Mood.DELIGHTED else Mood.SAD,
-                lastResult = ServeResult(stars, base, tip, msg, photo, combo),
-                coinsToday = it.coinsToday + base + tip,
+                lastResult = ServeResult(stars, base, tip, msg, photo, combo, rushBonus),
+                coinsToday = it.coinsToday + base + tip + rushBonus,
                 served = it.served + 1,
                 perfect = it.perfect + if (stars == 3) 1 else 0,
                 vipPerfect = it.vipPerfect + if (stars == 3 && order.vip) 1 else 0,

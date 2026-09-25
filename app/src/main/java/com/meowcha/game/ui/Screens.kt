@@ -417,10 +417,13 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                     },
             ) {
                 if (order.vip) VipGlow(Modifier.fillMaxSize())
+                if (order.rush) RushGlow(Modifier.fillMaxSize())
                 CatPortrait(order.cat, if (petAnim.value < 1f && s.lastResult == null) Mood.DELIGHTED else s.mood, Modifier.fillMaxSize())
                 if (petAnim.value < 1f) PetHearts(petAnim.value, Modifier.fillMaxSize())
                 if (order.vip) {
                     Box(Modifier.align(Alignment.TopCenter).padding(top = 4.dp)) { Chip("👑 VIP ×2", Color(0xFFFFF8E1), Color(0xFFF57F17)) }
+                } else if (order.rush) {
+                    Box(Modifier.align(Alignment.TopCenter).padding(top = 4.dp)) { Chip("⚡ RUSH ×1.5", Color(0xFFFFE0B2), Color(0xFFE65100)) }
                 }
             }
             Column(
@@ -456,13 +459,13 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                 )
                 if (s.queue.isNotEmpty()) {
                     Spacer(Modifier.height(6.dp))
-                    Text("En attente : " + s.queue.take(5).joinToString("") { if (it.vip) "👑" else "🐱" }, fontSize = 11.sp, color = Pink.Text)
+                    Text("En attente : " + s.queue.take(5).joinToString("") { if (it.vip) "👑" else if (it.rush) "⚡" else "🐱" }, fontSize = 11.sp, color = Pink.Text)
                 }
             }
             val r = s.lastResult
             if (r != null) {
                 Box(Modifier.align(Alignment.Center).graphicsLayer { scaleX = pop.value; scaleY = pop.value }) {
-                    ResultBadge(r.stars, r.coins + r.tip, r.photo, r.combo)
+                    ResultBadge(r.stars, r.coins + r.tip, r.photo, r.combo, r.rushBonus)
                 }
             }
         }
@@ -537,6 +540,15 @@ private fun VipGlow(modifier: Modifier) {
 }
 
 @Composable
+private fun RushGlow(modifier: Modifier) {
+    val anim = rememberInfiniteTransition(label = "rush")
+    val a by anim.animateFloat(0.2f, 0.55f, infiniteRepeatable(tween(400), RepeatMode.Reverse), label = "a")
+    Canvas(modifier) {
+        drawCircle(Brush.radialGradient(listOf(Color(0xFFFF7043).copy(alpha = a), Color.Transparent)), size.minDimension * 0.5f)
+    }
+}
+
+@Composable
 private fun PetHearts(t: Float, modifier: Modifier) {
     Canvas(modifier) {
         for (i in 0 until 5) {
@@ -548,7 +560,7 @@ private fun PetHearts(t: Float, modifier: Modifier) {
 }
 
 @Composable
-private fun ResultBadge(stars: Int, coins: Int, photo: Boolean, combo: Int) {
+private fun ResultBadge(stars: Int, coins: Int, photo: Boolean, combo: Int, rushBonus: Int = 0) {
     Column(
         Modifier.shadow(8.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.White).padding(horizontal = 24.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -556,6 +568,7 @@ private fun ResultBadge(stars: Int, coins: Int, photo: Boolean, combo: Int) {
         Text((1..3).joinToString("") { if (it <= stars) "⭐" else "☆" }, fontSize = 30.sp)
         Text("+$coins 🪙", fontWeight = FontWeight.Bold, color = Pink.Deep, fontSize = 20.sp)
         if (combo >= 2) Text("Combo x$combo 🔥", color = Color(0xFFE65100), fontWeight = FontWeight.Bold)
+        if (rushBonus > 0) Text("⚡ Rush tenu ! +$rushBonus 🪙", color = Color(0xFFE65100), fontWeight = FontWeight.Bold, fontSize = 13.sp)
         if (photo) Text("📸 Photo souvenir !", color = Pink.Text, fontSize = 13.sp)
     }
 }

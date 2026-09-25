@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.2.0 (en cours)
+## 1.3.0 (en cours)
+- Rush du matin : un jour sur deux environ, 3 clients d'affilée arrivent pressés (patience
+  réduite) mais paient 1.5x le prix normal, avec un bonus supplémentaire si toute la série
+  est tenue sans rater une boisson
+
+## 1.2.0
 - Mise à jour automatique de l'app : à la connexion, vérifie la dernière release GitHub et
   propose de télécharger puis d'installer l'APK directement (plus besoin d'aller le chercher
   à la main à chaque nouvelle version)
