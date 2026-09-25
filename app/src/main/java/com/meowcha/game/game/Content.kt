@@ -119,6 +119,8 @@ data class Mug(
     val price: Int,
     /** Bonus de pourboire en pourcentage. */
     val tipBonus: Int,
+    /** Chemin vers un modèle .glb (dans assets/) pour un rendu 3D à la place du dessin Canvas. */
+    val model3d: String? = null,
 )
 
 object Mugs {
@@ -132,6 +134,11 @@ object Mugs {
         Mug("strawberry", "Fraisier", Color(0xFFFFF0F3), Color(0xFFE53935), MugPattern.STRAWBERRIES, false, 130, 18),
         Mug("kitty", "Oreilles de chat", Color(0xFFFFFFFF), Color(0xFFF48FB1), MugPattern.NONE, true, 160, 22),
         Mug("sakura", "Sakura royal", Color(0xFFFCE4EC), Color(0xFFFF80AB), MugPattern.FLOWERS, true, 250, 30),
+        // Tasses en modèle 3D (premier export Blender, spike 2.0.0)
+        Mug("classic3d", "Classique 3D", Color(0xFFFFFBF5), Color(0xFF8C593A), MugPattern.NONE, false, 300, 25, "models/mug_classic.glb"),
+        Mug("matcha3d", "Matcha 3D", Color(0xFF9EC78C), Color(0xFF73994D), MugPattern.NONE, false, 320, 28, "models/mug_matcha.glb"),
+        Mug("sakura3d", "Sakura 3D", Color(0xFFFAB8CC), Color(0xFF8C593A), MugPattern.NONE, true, 340, 30, "models/mug_sakura.glb"),
+        Mug("minuit3d", "Minuit 3D", Color(0xFF333A61), Color(0xFF4D3323), MugPattern.NONE, true, 360, 32, "models/mug_minuit.glb"),
     )
 
     fun byId(id: String) = all.firstOrNull { it.id == id } ?: all.first()

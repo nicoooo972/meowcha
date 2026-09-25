@@ -511,7 +511,7 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             CounterTop(Modifier.fillMaxSize(), tilt)
-            MugView(mug, s.cup, Modifier.size(170.dp).graphicsLayer { translationX = tilt.x * 18.dp.toPx() })
+            MugView(mug, s.cup, Modifier.size(170.dp).graphicsLayer { translationX = tilt.x * 18.dp.toPx() }, use3d = false)
             if (s.cup.isNotEmpty()) {
                 Text(
                     s.cup.joinToString(" ") { it.emoji },

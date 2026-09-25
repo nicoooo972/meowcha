@@ -414,7 +414,11 @@ data class MugAnim(
  * Quand un ingrédient est ajouté, on voit un filet couler dans la tasse.
  */
 @Composable
-fun MugView(mug: Mug, contents: List<Ingredient>, modifier: Modifier = Modifier, animated: Boolean = true) {
+fun MugView(mug: Mug, contents: List<Ingredient>, modifier: Modifier = Modifier, animated: Boolean = true, use3d: Boolean = true) {
+    if (use3d && mug.model3d != null) {
+        Model3DPreview(mug.model3d, modifier)
+        return
+    }
     if (!animated) {
         Canvas(modifier) { drawMug(mug, contents, MugAnim()) }
         return
