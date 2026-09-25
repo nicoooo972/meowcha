@@ -84,6 +84,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import com.meowcha.game.data.AccountEntity
 import com.meowcha.game.data.AppUpdate
 import com.meowcha.game.data.AppUpdater
+import com.meowcha.game.data.DayHistoryEntity
 import com.meowcha.game.data.UpdateDownloadEvent
 import com.meowcha.game.game.Audio
 import com.meowcha.game.game.Cats
@@ -100,7 +101,7 @@ import com.meowcha.game.game.SessionState
 import com.meowcha.game.game.SessionViewModel
 import kotlinx.coroutines.launch
 
-enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES }
+enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES, STATS }
 
 @Composable
 fun MeowchaApp(session: SessionViewModel = viewModel()) {
@@ -222,6 +223,7 @@ private fun CafeApp(account: AccountEntity, onLogout: () -> Unit) {
             Screen.SHOP -> ShopScreen(vm, onBack = back)
             Screen.ALBUM -> AlbumScreen(vm, onBack = back)
             Screen.RECIPES -> RecipesScreen(vm, onBack = back)
+            Screen.STATS -> StatsScreen(vm, onBack = back)
         }
     }
 }
@@ -308,6 +310,7 @@ private fun HomeScreen(vm: GameViewModel, account: AccountEntity, onLogout: () -
             CuteButton("📸 Album", Modifier.weight(1f), Color(0xFFBA68C8)) { go(Screen.ALBUM) }
         }
         CuteButton("📖 Carnet de recettes", Modifier.fillMaxWidth(), Color(0xFFF48FB1)) { go(Screen.RECIPES) }
+        CuteButton("📊 Statistiques", Modifier.fillMaxWidth(), Color(0xFF9575CD)) { go(Screen.STATS) }
     }
 }
 
@@ -821,6 +824,64 @@ private fun RecipesScreen(vm: GameViewModel, onBack: () -> Unit) {
                     Text("${r.price} 🪙", fontWeight = FontWeight.Bold, color = Pink.Text)
                 }
             }
+        }
+    }
+}
+
+/* ------------------------------- Statistiques -------------------------------- */
+
+@Composable
+private fun StatsScreen(vm: GameViewModel, onBack: () -> Unit) {
+    val player by vm.player.collectAsState()
+    val history by vm.history.collectAsState()
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Statistiques", player.coins, onBack)
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            SoftCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("📈 Records", fontWeight = FontWeight.Bold, color = Pink.Deep, fontSize = 17.sp)
+                    StatLine("🏆 Meilleur jour", "${player.bestDayCoins} 🪙")
+                    StatLine("🔥 Meilleur combo", "x${player.bestCombo}")
+                    StatLine("⭐ Boissons parfaites (total)", "${player.perfectServed}")
+                    StatLine("🐱 Chats servis (total)", "${player.totalServed}")
+                }
+            }
+
+            Text("Derniers jours", fontWeight = FontWeight.Bold, color = Pink.Deep, fontSize = 17.sp)
+            if (history.isEmpty()) {
+                Text(
+                    "Pas encore de journée terminée — ouvre le café pour commencer ton historique !",
+                    color = Pink.Text, fontSize = 13.sp,
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    history.forEach { h -> DayHistoryRow(h) }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun StatLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth()) {
+        Text(label, Modifier.weight(1f), color = Pink.Text, fontSize = 14.sp)
+        Text(value, fontWeight = FontWeight.Bold, color = Pink.Deep, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun DayHistoryRow(h: DayHistoryEntity) {
+    SoftCard(Modifier.fillMaxWidth(), corner = 16) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Jour ${h.day}", Modifier.weight(1f), fontWeight = FontWeight.Bold, color = Pink.Deep, fontSize = 15.sp)
+            Text("🐱 ${h.served} · ⭐ ${h.perfect}", fontSize = 12.sp, color = Pink.Text)
+            Spacer(Modifier.width(10.dp))
+            Text("+${h.coins} 🪙", fontWeight = FontWeight.Bold, color = Pink.Text, fontSize = 14.sp)
         }
     }
 }

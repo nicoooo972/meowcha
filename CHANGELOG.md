@@ -4,6 +4,8 @@
 - Rush du matin : un jour sur deux environ, 3 clients d'affilée arrivent pressés (patience
   réduite) mais paient 1.5x le prix normal, avec un bonus supplémentaire si toute la série
   est tenue sans rater une boisson
+- Écran Statistiques : records (meilleur jour, meilleur combo, totaux) et historique des
+  dernières journées jouées, accessible depuis l'accueil
 
 ## 1.2.0
 - Mise à jour automatique de l'app : à la connexion, vérifie la dernière release GitHub et
