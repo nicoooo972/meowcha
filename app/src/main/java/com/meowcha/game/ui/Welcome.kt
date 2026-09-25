@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meowcha.game.data.AccountEntity
+import com.meowcha.game.data.AppUpdate
 import com.meowcha.game.game.Cats
 import com.meowcha.game.game.Ingredient
 import com.meowcha.game.game.Mood
@@ -341,5 +342,87 @@ fun NewsDialog(news: News, onDismiss: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             CuteButton("💖 Trop bien !", Modifier.fillMaxWidth(), Pink.Deep, onClick = onDismiss)
         }
+    }
+}
+
+/* --------------------------- Mise à jour de l'application --------------------------- */
+
+/** État d'avancement affiché par [UpdateDialog]. */
+sealed interface UpdatePhase {
+    data object Available : UpdatePhase
+    data class Downloading(val progress: Float, val speedKb: Int) : UpdatePhase
+    data class Ready(val file: java.io.File) : UpdatePhase
+    data class Failed(val message: String) : UpdatePhase
+}
+
+@Composable
+fun UpdateDialog(
+    update: AppUpdate,
+    phase: UpdatePhase,
+    onDownload: () -> Unit,
+    onInstall: (java.io.File) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val pop = remember { Animatable(0.6f) }
+    LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow)) }
+    Dialog(onDismissRequest = { if (phase !is UpdatePhase.Downloading) onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.padding(20.dp).fillMaxWidth()
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                .shadow(12.dp, RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(32.dp))
+                .background(Brush.verticalGradient(listOf(Pink.Light, Color.White)))
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                FloatingHearts(Modifier.fillMaxSize())
+                Text("🚀🐱", fontSize = 40.sp)
+            }
+            Title("Nouvelle version !", 26)
+            Spacer(Modifier.height(6.dp))
+            Text("Meowcha Café ${update.versionLabel} est prête", color = Pink.Text, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
+            when (phase) {
+                is UpdatePhase.Available -> {
+                    Text(
+                        "Plus besoin d'aller chercher l'APK : l'app peut télécharger et installer la mise à jour elle-même.",
+                        color = Pink.Text, fontSize = 13.sp, textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    CuteButton("⬇️ Télécharger la mise à jour", Modifier.fillMaxWidth(), onClick = onDownload)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Plus tard", Modifier.clickable { onDismiss() }.padding(8.dp), color = Pink.Text, fontSize = 13.sp)
+                }
+                is UpdatePhase.Downloading -> {
+                    LinearProgressIndicatorCute(phase.progress)
+                    Spacer(Modifier.height(8.dp))
+                    Text("${(phase.progress * 100).toInt()} % · ${phase.speedKb} Ko/s", color = Pink.Deep, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                is UpdatePhase.Ready -> {
+                    Text("Téléchargée ! Confirme l'installation dans la fenêtre système.", color = Pink.Text, fontSize = 13.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(16.dp))
+                    CuteButton("📦 Installer maintenant", Modifier.fillMaxWidth(), Pink.Deep) { onInstall(phase.file) }
+                }
+                is UpdatePhase.Failed -> {
+                    Text("⚠️ ${phase.message}", color = Color(0xFFD32F2F), fontSize = 13.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(16.dp))
+                    CuteButton("Réessayer", Modifier.fillMaxWidth(), onClick = onDownload)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinearProgressIndicatorCute(progress: Float) {
+    Box(
+        Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(8.dp)).background(Color.White),
+    ) {
+        Box(
+            Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(14.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Brush.horizontalGradient(listOf(Pink.Main, Pink.Deep))),
+        )
     }
 }

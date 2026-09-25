@@ -1,6 +1,16 @@
 # Changelog
 
-## 1.1.0 (en cours)
+## 1.2.0 (en cours)
+- Mise à jour automatique de l'app : à la connexion, vérifie la dernière release GitHub et
+  propose de télécharger puis d'installer l'APK directement (plus besoin d'aller le chercher
+  à la main à chaque nouvelle version)
+- Refonte graphique de l'habillage : titres façon « sticker » (contour + ombre), boutons façon
+  bonbon avec relief 3D et reflet brillant, cartes (boutique, décorations, recettes, album)
+  avec dégradé, ombre douce et bordure
+- Nouvelle icône de l'application : tasse en céramique avec dégradés, reflet, ombre portée,
+  vapeur animée, fond en dégradé rose
+
+## 1.1.0
 - Écran de chargement animé (tasse qui se remplit, barre de pattes, astuces)
 - Comptes locaux : création / connexion (mot de passe haché), avatar chat, plusieurs profils,
   une sauvegarde par compte (la progression 1.0 est reprise par le premier compte)

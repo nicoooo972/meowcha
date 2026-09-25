@@ -80,7 +80,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.runtime.rememberCoroutineScope
 import com.meowcha.game.data.AccountEntity
+import com.meowcha.game.data.AppUpdate
+import com.meowcha.game.data.AppUpdater
+import com.meowcha.game.data.UpdateDownloadEvent
 import com.meowcha.game.game.Audio
 import com.meowcha.game.game.Cats
 import com.meowcha.game.game.DayState
@@ -94,6 +98,7 @@ import com.meowcha.game.game.Mugs
 import com.meowcha.game.game.Recipes
 import com.meowcha.game.game.SessionState
 import com.meowcha.game.game.SessionViewModel
+import kotlinx.coroutines.launch
 
 enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES }
 
@@ -101,6 +106,18 @@ enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES }
 fun MeowchaApp(session: SessionViewModel = viewModel()) {
     val state by session.state.collectAsState()
     val news by session.news.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var pendingUpdate by remember { mutableStateOf<AppUpdate?>(null) }
+    var updatePhase by remember { mutableStateOf<UpdatePhase>(UpdatePhase.Available) }
+
+    LaunchedEffect(state) {
+        if (state is SessionState.LoggedIn && pendingUpdate == null) {
+            pendingUpdate = AppUpdater.check(context)
+            updatePhase = UpdatePhase.Available
+        }
+    }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -123,6 +140,40 @@ fun MeowchaApp(session: SessionViewModel = viewModel()) {
         // Affichée une fois le chargement terminé
         val n = news
         if (n != null && state !is SessionState.Loading) NewsDialog(n, onDismiss = session::dismissNews)
+
+        val update = pendingUpdate
+        if (update != null && state is SessionState.LoggedIn && n == null) {
+            UpdateDialog(
+                update = update,
+                phase = updatePhase,
+                onDownload = {
+                    scope.launch {
+                        updatePhase = UpdatePhase.Downloading(0f, 0)
+                        val file = AppUpdater.download(context, update) { event ->
+                            if (event is UpdateDownloadEvent.Progress) {
+                                updatePhase = UpdatePhase.Downloading(
+                                    event.bytes.toFloat() / maxOf(1L, event.total),
+                                    (event.bytesPerSecond / 1024).toInt(),
+                                )
+                            }
+                        }
+                        updatePhase = if (file != null) UpdatePhase.Ready(file)
+                        else UpdatePhase.Failed("Le téléchargement a échoué, réessaie plus tard.")
+                    }
+                },
+                onInstall = { file ->
+                    if (AppUpdater.canInstall(context)) {
+                        AppUpdater.install(context, file)
+                    } else {
+                        context.startActivity(AppUpdater.requestInstallPermissionIntent(context))
+                    }
+                },
+                onDismiss = {
+                    AppUpdater.dismiss(context, update)
+                    pendingUpdate = null
+                },
+            )
+        }
     }
 }
 
@@ -617,29 +668,34 @@ private fun ShopScreen(vm: GameViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun DecorCard(d: Decor, owned: Boolean, canBuy: Boolean, onBuy: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(54.dp).clip(CircleShape).background(Pink.Bg), contentAlignment = Alignment.Center) { Text(d.emoji, fontSize = 28.sp) }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(d.name, fontWeight = FontWeight.Bold, color = Pink.Text)
-            Text(d.description, fontSize = 12.sp, color = Color.Gray)
+    SoftCard(Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(54.dp).clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(Pink.Light, Pink.Bg))),
+                contentAlignment = Alignment.Center,
+            ) { Text(d.emoji, fontSize = 28.sp) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(d.name, fontWeight = FontWeight.Bold, color = Pink.Text)
+                Text(d.description, fontSize = 12.sp, color = Color.Gray)
+            }
+            Spacer(Modifier.width(8.dp))
+            if (owned) Text("💖 Installé", color = Pink.Deep, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            else CuteButton("${d.price} 🪙", Modifier.width(110.dp), enabled = canBuy, onClick = onBuy)
         }
-        Spacer(Modifier.width(8.dp))
-        if (owned) Text("💖 Installé", color = Pink.Deep, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        else CuteButton("${d.price} 🪙", Modifier.width(110.dp), enabled = canBuy, onClick = onBuy)
     }
 }
 
 @Composable
 private fun MugCard(mug: Mug, owned: Boolean, equipped: Boolean, canBuy: Boolean, onBuy: () -> Unit, onEquip: () -> Unit) {
+    val shape = RoundedCornerShape(20.dp)
     Column(
         Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
-            .border(if (equipped) 3.dp else 0.dp, if (equipped) Pink.Deep else Color.Transparent, RoundedCornerShape(20.dp))
+            .shadow(5.dp, shape, ambientColor = Pink.Deep.copy(alpha = 0.18f), spotColor = Pink.Deep.copy(alpha = 0.28f))
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(Color.White, Pink.Cream)))
+            .border(if (equipped) 3.dp else 1.dp, if (equipped) Pink.Deep else Pink.Light.copy(alpha = 0.55f), shape)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -679,12 +735,19 @@ private fun AlbumScreen(vm: GameViewModel, onBack: () -> Unit) {
                 Column(
                     Modifier
                         .rotate(if (i % 2 == 0) -3f else 3f)
-                        .shadow(4.dp)
+                        .shadow(6.dp, RoundedCornerShape(4.dp), ambientColor = Color.Black.copy(alpha = 0.3f))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(Color.White)
+                        .border(1.dp, Color.White, RoundedCornerShape(4.dp))
                         .padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(1f).background(if (info != null) Pink.Light else Color(0xFFE0E0E0))) {
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).background(
+                            if (info != null) Brush.radialGradient(listOf(Pink.Light, Pink.Main.copy(alpha = 0.4f)))
+                            else Brush.radialGradient(listOf(Color(0xFFECECEC), Color(0xFFD8D8D8))),
+                        ),
+                    ) {
                         if (info != null) {
                             CatPortrait(cat, if (info.hearts >= 5) Mood.DELIGHTED else Mood.HAPPY, Modifier.fillMaxSize())
                         } else {
@@ -719,9 +782,17 @@ private fun RecipesScreen(vm: GameViewModel, onBack: () -> Unit) {
         LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(Recipes.all) { r ->
                 val unlocked = r.unlockDay <= player.day
+                val shape = RoundedCornerShape(18.dp)
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(if (unlocked) Color.White else Color.White.copy(alpha = 0.5f)).padding(10.dp),
+                    Modifier.fillMaxWidth()
+                        .shadow(if (unlocked) 4.dp else 0.dp, shape, ambientColor = Pink.Deep.copy(alpha = 0.15f))
+                        .clip(shape)
+                        .background(
+                            if (unlocked) Brush.verticalGradient(listOf(Color.White, Pink.Cream))
+                            else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.4f))),
+                        )
+                        .border(1.dp, Pink.Light.copy(alpha = if (unlocked) 0.5f else 0.2f), shape)
+                        .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     MugView(Mugs.byId(player.equippedMug), if (unlocked) r.steps else emptyList(), Modifier.size(70.dp))

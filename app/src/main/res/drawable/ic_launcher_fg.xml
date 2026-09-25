@@ -1,23 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tasse rose avec des oreilles de chat -->
+<!-- Tasse en céramique avec oreilles de chat, vue légèrement en relief -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- oreilles -->
-    <path android:fillColor="#FFFFFFFF" android:pathData="M36,46 L40,30 L50,42 Z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M72,46 L68,30 L58,42 Z" />
-    <path android:fillColor="#FFF48FB1" android:pathData="M39,43 L41,35 L46,41 Z" />
-    <path android:fillColor="#FFF48FB1" android:pathData="M69,43 L67,35 L62,41 Z" />
+
+    <!-- vapeur -->
+    <path android:strokeColor="#66FFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M46,20 C43,15 49,12 46,7" />
+    <path android:strokeColor="#4DFFFFFF" android:strokeWidth="2.6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M60,20 C57,14 63,11 60,5" />
+
+    <!-- ombre portée au sol -->
+    <path android:fillColor="#1A5D4037" android:pathData="M54,84 m-24,0 a24,5.5 0,1 0,48 0 a24,5.5 0,1 0,-48 0" />
+
+    <!-- oreilles (extérieur) -->
+    <path android:pathData="M35,47 L39,29 L50,42 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="35" android:startY="47" android:endX="50" android:endY="29"
+                android:startColor="#FFFFFFFF" android:endColor="#FFF3E9F0" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M73,47 L69,29 L58,42 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="73" android:startY="47" android:endX="58" android:endY="29"
+                android:startColor="#FFFFFFFF" android:endColor="#FFF3E9F0" />
+        </aapt:attr>
+    </path>
+    <!-- oreilles (intérieur) -->
+    <path android:fillColor="#FFEC80A8" android:pathData="M38,44 L40,34 L46,41 Z" />
+    <path android:fillColor="#FFEC80A8" android:pathData="M70,44 L68,34 L62,41 Z" />
+    <path android:fillColor="#33FFFFFF" android:pathData="M39,41 L40,36 L43,39.5 Z" />
+    <path android:fillColor="#33FFFFFF" android:pathData="M69,41 L68,36 L65,39.5 Z" />
+
     <!-- anse -->
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:fillColor="#00000000"
-        android:pathData="M74,52 C86,52 86,70 72,70" />
-    <!-- tasse -->
-    <path android:fillColor="#FFFFFFFF" android:pathData="M32,42 L76,42 L72,76 Q71,80 67,80 L41,80 Q37,80 36,76 Z" />
+    <path android:strokeWidth="5.5" android:fillColor="#00000000" android:pathData="M74,53 C87,53 87,72 72,72">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="74" android:startY="53" android:endX="74" android:endY="72"
+                android:startColor="#FFFFFFFF" android:endColor="#FFF0DCE6" />
+        </aapt:attr>
+    </path>
+
+    <!-- corps de la tasse -->
+    <path android:pathData="M31,42 L77,42 L73,78 Q72,82 67,82 L41,82 Q36,82 35,78 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="31" android:startY="42" android:endX="77" android:endY="82"
+                android:startColor="#FFFFFFFF" android:endColor="#FFF6E9EF" />
+        </aapt:attr>
+    </path>
+    <!-- reflet brillant -->
+    <path android:fillColor="#59FFFFFF" android:pathData="M39,47 Q37,62 41,74 Q35,62 37,46 Z" />
+    <!-- rebord -->
+    <path android:fillColor="#FFF9F1F5" android:pathData="M31,42 L77,42 L76,47 L32,47 Z" />
+    <path android:strokeColor="#12000000" android:strokeWidth="1" android:fillColor="#00000000" android:pathData="M32,47 L76,47" />
+
     <!-- visage -->
-    <path android:fillColor="#FF5D4037" android:pathData="M45,58 m-2.5,0 a2.5,2.5 0,1 0,5 0 a2.5,2.5 0,1 0,-5 0" />
-    <path android:fillColor="#FF5D4037" android:pathData="M63,58 m-2.5,0 a2.5,2.5 0,1 0,5 0 a2.5,2.5 0,1 0,-5 0" />
-    <path android:strokeColor="#FF5D4037" android:strokeWidth="1.8" android:fillColor="#00000000"
-        android:pathData="M50,64 Q52,67 54,64 Q56,67 58,64" />
-    <path android:fillColor="#FFF8BBD0" android:pathData="M40,64 m-3,0 a3,2 0,1 0,6 0 a3,2 0,1 0,-6 0" />
-    <path android:fillColor="#FFF8BBD0" android:pathData="M68,64 m-3,0 a3,2 0,1 0,6 0 a3,2 0,1 0,-6 0" />
+    <path android:fillColor="#FF5D4037" android:pathData="M45,59 m-2.6,0 a2.6,2.6 0,1 0,5.2 0 a2.6,2.6 0,1 0,-5.2 0" />
+    <path android:fillColor="#FF5D4037" android:pathData="M63,59 m-2.6,0 a2.6,2.6 0,1 0,5.2 0 a2.6,2.6 0,1 0,-5.2 0" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M44,57.3 m-0.8,0 a0.8,0.8 0,1 0,1.6 0 a0.8,0.8 0,1 0,-1.6 0" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M62,57.3 m-0.8,0 a0.8,0.8 0,1 0,1.6 0 a0.8,0.8 0,1 0,-1.6 0" />
+    <path android:strokeColor="#FF5D4037" android:strokeWidth="1.9" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M50,65 Q52,68.5 54,65 Q56,68.5 58,65" />
+    <path android:fillColor="#FFF6A8C6" android:pathData="M39,65 m-3.2,0 a3.2,2.1 0,1 0,6.4 0 a3.2,2.1 0,1 0,-6.4 0" />
+    <path android:fillColor="#FFF6A8C6" android:pathData="M69,65 m-3.2,0 a3.2,2.1 0,1 0,6.4 0 a3.2,2.1 0,1 0,-6.4 0" />
 </vector>
