@@ -75,4 +75,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // Spike rendu 3D (glTF/.glb) pour la 2.0.0 — voir ui/Scene3D.kt
+    implementation("io.github.sceneview:sceneview:4.39.0")
 }

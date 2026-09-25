@@ -105,7 +105,7 @@ import com.meowcha.game.game.SessionState
 import com.meowcha.game.game.SessionViewModel
 import kotlinx.coroutines.launch
 
-enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES, STATS }
+enum class Screen { HOME, GAME, SHOP, ALBUM, RECIPES, STATS, SPIKE_3D }
 
 @Composable
 fun MeowchaApp(session: SessionViewModel = viewModel()) {
@@ -238,7 +238,17 @@ private fun CafeApp(account: AccountEntity, onLogout: () -> Unit) {
             Screen.ALBUM -> AlbumScreen(vm, onBack = back)
             Screen.RECIPES -> RecipesScreen(vm, onBack = back)
             Screen.STATS -> StatsScreen(vm, onBack = back)
+            Screen.SPIKE_3D -> Spike3DScreen(onBack = back)
         }
+    }
+}
+
+/** Écran temporaire de validation du pipeline glTF (spike 2.0.0) — à retirer une fois le rendu 3D décidé. */
+@Composable
+private fun Spike3DScreen(onBack: () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Spike 3D", 0, onBack)
+        Model3DPreview("models/test_duck.glb", Modifier.weight(1f).fillMaxWidth())
     }
 }
 
@@ -325,6 +335,7 @@ private fun HomeScreen(vm: GameViewModel, account: AccountEntity, onLogout: () -
         }
         CuteButton("📖 Carnet de recettes", Modifier.fillMaxWidth(), Color(0xFFF48FB1)) { go(Screen.RECIPES) }
         CuteButton("📊 Statistiques", Modifier.fillMaxWidth(), Color(0xFF9575CD)) { go(Screen.STATS) }
+        CuteButton("🧪 Spike 3D (debug)", Modifier.fillMaxWidth(), Color(0xFF78909C)) { go(Screen.SPIKE_3D) }
     }
 }
 
