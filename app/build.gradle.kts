@@ -12,12 +12,12 @@ val keystorePath: String? = System.getenv("KEYSTORE_PATH")
 
 android {
     namespace = "com.meowcha.game"
-    compileSdk = 34
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.meowcha.game"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 37
         versionCode = vMajor * 10000 + vMinor * 100 + vPatch
         versionName = appVersion
         // Adresse où l'app va chercher les packs de contenu (index.json + zips)
