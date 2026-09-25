@@ -13,6 +13,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -211,7 +215,17 @@ private fun CafeApp(account: AccountEntity, onLogout: () -> Unit) {
 
     AnimatedContent(
         targetState = screen,
-        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
+        transitionSpec = {
+            val forward = initialState == Screen.HOME && targetState != Screen.HOME
+            val backward = targetState == Screen.HOME && initialState != Screen.HOME
+            when {
+                forward -> (slideInHorizontally(spring(stiffness = Spring.StiffnessMediumLow)) { it / 4 } + fadeIn(tween(280))) togetherWith
+                    (slideOutHorizontally(tween(220)) { -it / 6 } + fadeOut(tween(180)))
+                backward -> (slideInHorizontally(spring(stiffness = Spring.StiffnessMediumLow)) { -it / 4 } + fadeIn(tween(280))) togetherWith
+                    (slideOutHorizontally(tween(220)) { it / 6 } + fadeOut(tween(180)))
+                else -> fadeIn(tween(300)) togetherWith fadeOut(tween(200))
+            }
+        },
         label = "screen",
     ) { target ->
         when (target) {
@@ -384,7 +398,14 @@ private fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
             Spacer(Modifier.width(6.dp))
             Chip("🐱 ${minOf(s.served + s.left + 1, s.totalCustomers)}/${s.totalCustomers}")
             Spacer(Modifier.width(6.dp))
-            if (s.combo >= 2) Chip("🔥 x${s.combo}", Color(0xFFFFE0B2), Color(0xFFE65100))
+            AnimatedContent(
+                targetState = s.combo,
+                transitionSpec = {
+                    (scaleIn(spring(dampingRatio = Spring.DampingRatioHighBouncy), initialScale = 0.4f) + fadeIn()) togetherWith
+                        (scaleOut(tween(150), targetScale = 0.6f) + fadeOut(tween(150)))
+                },
+                label = "combo",
+            ) { combo -> if (combo >= 2) Chip("🔥 x$combo", Color(0xFFFFE0B2), Color(0xFFE65100)) }
             Spacer(Modifier.weight(1f))
             Coins(player.coins + s.coinsToday)
         }

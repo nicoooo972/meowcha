@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.3.0 (en cours)
+## 2.0.0 (en cours)
+- Refonte des animations : transitions fluides entre les écrans, boutons et cartes réactifs
+  au toucher, chats et mugs animés (respiration, clignement, queue), scores et combos qui
+  s'affichent avec du rebond
+
+## 1.3.0
 - Rush du matin : un jour sur deux environ, 3 clients d'affilée arrivent pressés (patience
   réduite) mais paient 1.5x le prix normal, avec un bonus supplémentaire si toute la série
   est tenue sans rater une boisson

@@ -1,9 +1,14 @@
 package com.meowcha.game.ui
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
@@ -19,9 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -71,13 +78,21 @@ fun Title(text: String, size: Int = 34, modifier: Modifier = Modifier, color: Co
 fun CuteButton(text: String, modifier: Modifier = Modifier, color: Color = Pink.Main, enabled: Boolean = true, onClick: () -> Unit) {
     val shape = RoundedCornerShape(22.dp)
     val base = if (enabled) color else color.copy(alpha = 0.5f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "buttonPress",
+    )
     Box(
         modifier
+            .scale(pressScale)
             .height(56.dp)
             .shadow(if (enabled) 5.dp else 0.dp, shape, ambientColor = base, spotColor = base)
             .clip(shape)
             .background(base.shade(-0.3f))
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled, onClick = onClick)
             .padding(bottom = 5.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -144,14 +159,22 @@ fun Chip(text: String, background: Color = Color.White.copy(alpha = 0.9f), color
 
 @Composable
 fun RoundIconButton(text: String, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "iconButtonPress",
+    )
     Box(
         Modifier
+            .scale(pressScale)
             .size(44.dp)
             .shadow(3.dp, CircleShape, ambientColor = Pink.Deep.copy(alpha = 0.3f))
             .clip(CircleShape)
             .background(Brush.verticalGradient(listOf(Color.White, Pink.Cream)))
             .border(1.dp, Pink.Light.copy(alpha = 0.7f), CircleShape)
-            .clickable { onClick() },
+            .clickable(interactionSource = interactionSource, indication = null) { onClick() },
         contentAlignment = Alignment.Center,
     ) { Text(text, color = Pink.Deep, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
 }
