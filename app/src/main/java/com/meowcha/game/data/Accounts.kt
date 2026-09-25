@@ -1,22 +1,17 @@
 package com.meowcha.game.data
 
 import android.content.Context
-import androidx.room.Dao
-import androidx.room.Database
-import androidx.room.Entity
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
-import androidx.room.Query
-import androidx.room.Room
-import androidx.room.RoomDatabase
+import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** Compte local stocké sur le téléphone (le mot de passe n'est jamais stocké en clair). */
-@Entity(tableName = "accounts")
 data class AccountEntity(
-    @PrimaryKey val username: String,
+    val username: String,
     val displayName: String,
     val avatarCat: String,
     val salt: String,
@@ -25,33 +20,61 @@ data class AccountEntity(
     val lastLogin: Long = System.currentTimeMillis(),
 )
 
-@Dao
-interface AccountDao {
-    @Query("SELECT * FROM accounts ORDER BY lastLogin DESC")
-    suspend fun all(): List<AccountEntity>
-
-    @Query("SELECT * FROM accounts WHERE username = :username")
-    suspend fun find(username: String): AccountEntity?
-
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insert(a: AccountEntity)
-
-    @Query("UPDATE accounts SET lastLogin = :time WHERE username = :username")
-    suspend fun touch(username: String, time: Long)
-
-    @Query("SELECT COUNT(*) FROM accounts")
-    suspend fun count(): Int
+private fun AccountEntity.toJson() = JSONObject().apply {
+    put("username", username); put("displayName", displayName); put("avatarCat", avatarCat)
+    put("salt", salt); put("passwordHash", passwordHash); put("createdAt", createdAt); put("lastLogin", lastLogin)
 }
 
-@Database(entities = [AccountEntity::class], version = 1, exportSchema = false)
-abstract class AccountsDb : RoomDatabase() {
-    abstract fun dao(): AccountDao
+private fun JSONObject.toAccount() = AccountEntity(
+    username = getString("username"), displayName = getString("displayName"), avatarCat = getString("avatarCat"),
+    salt = getString("salt"), passwordHash = getString("passwordHash"),
+    createdAt = optLong("createdAt", System.currentTimeMillis()), lastLogin = optLong("lastLogin", System.currentTimeMillis()),
+)
+
+/** Comptes locaux stockés en JSON (voir CHANGELOG 2.0.0 : remplace l'ancienne base Room). */
+class AccountDao(private val file: File) {
+    private val lock = Mutex()
+    private var accounts: List<AccountEntity> = load()
+
+    private fun load(): List<AccountEntity> {
+        if (!file.exists()) return emptyList()
+        val arr = runCatching { JSONArray(file.readText()) }.getOrNull() ?: return emptyList()
+        return (0 until arr.length()).map { arr.getJSONObject(it).toAccount() }
+    }
+
+    private fun persist() {
+        file.parentFile?.mkdirs()
+        val tmp = File(file.parentFile, "${file.name}.tmp")
+        tmp.writeText(JSONArray().apply { accounts.forEach { put(it.toJson()) } }.toString())
+        tmp.renameTo(file)
+    }
+
+    suspend fun all(): List<AccountEntity> = lock.withLock { accounts.sortedByDescending { it.lastLogin } }
+
+    suspend fun find(username: String): AccountEntity? = lock.withLock { accounts.find { it.username == username } }
+
+    suspend fun insert(a: AccountEntity) = lock.withLock {
+        require(accounts.none { it.username == a.username }) { "compte déjà existant" }
+        accounts = accounts + a
+        persist()
+    }
+
+    suspend fun touch(username: String, time: Long) = lock.withLock {
+        accounts = accounts.map { if (it.username == username) it.copy(lastLogin = time) else it }
+        persist()
+    }
+
+    suspend fun count(): Int = lock.withLock { accounts.size }
+}
+
+class AccountsDb private constructor(file: File) {
+    private val dao = AccountDao(file)
+    fun dao() = dao
 
     companion object {
         @Volatile private var instance: AccountsDb? = null
         fun get(context: Context): AccountsDb = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, AccountsDb::class.java, "meowcha_accounts.db")
-                .build().also { instance = it }
+            instance ?: AccountsDb(File(context.filesDir, "meowcha_accounts.json")).also { instance = it }
         }
     }
 }
@@ -104,15 +127,14 @@ class AccountRepository(private val context: Context) {
 
     private fun saveSession(username: String) = prefs.edit().putString(KEY_USER, username).apply()
 
-    private fun adoptLegacySave(username: String) {
-        val legacy = context.getDatabasePath("meowcha.db")
-        if (!legacy.exists()) return
-        val target = context.getDatabasePath(MeowchaDb.fileName(username))
-        for (suffix in listOf("", "-wal", "-shm")) {
-            val from = java.io.File(legacy.path + suffix)
-            if (from.exists()) from.renameTo(java.io.File(target.path + suffix))
-        }
-    }
+    /**
+     * Ancienne sauvegarde v1.0 (avant les comptes) : elle vivait dans une base SQLite Room.
+     * Depuis la 2.0.0 les sauvegardes sont au format JSON (voir Database.kt) — les deux formats
+     * ne sont pas compatibles, donc cette adoption ne peut plus rapatrier l'ancien fichier.
+     * Impact : un compte créé sur un appareil qui a encore une sauvegarde v1.0 non migrée
+     * repart de zéro plutôt que de la récupérer.
+     */
+    private fun adoptLegacySave(username: String) {}
 
     private fun hash(password: String, salt: String): String {
         val md = MessageDigest.getInstance("SHA-256")
