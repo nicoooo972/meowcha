@@ -248,7 +248,7 @@ private fun CafeApp(account: AccountEntity, onLogout: () -> Unit) {
 private fun Spike3DScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         TopBar("Spike 3D", 0, onBack)
-        Model3DPreview("models/test_duck.glb", Modifier.weight(1f).fillMaxWidth())
+        Model3DPreview("models/cat_cafe_mugs.glb", Modifier.weight(1f).fillMaxWidth())
     }
 }
 

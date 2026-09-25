@@ -12,8 +12,8 @@ import io.github.sceneview.rememberModelLoader
 
 /**
  * Spike technique 2.0.0 : rendu d'un modèle .glb (Blender → glTF Binary) via SceneView/Filament.
- * `assetPath` pointe dans `app/src/main/assets/` (ex. "models/test_duck.glb" pour le modèle de
- * test livré avec ce spike, en attendant un premier export Blender du projet).
+ * `assetPath` pointe dans `app/src/main/assets/` (ex. "models/cat_cafe_mugs.glb" pour le premier
+ * export Blender du projet ; "models/test_duck.glb" reste le modèle de test du spike initial).
  */
 @Composable
 fun Model3DPreview(assetPath: String, modifier: Modifier = Modifier.fillMaxSize()) {
